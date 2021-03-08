@@ -41,7 +41,10 @@ class Share(commands.Cog):
 
     @commands.command()
     async def share(self, ctx, url: str):
-        await ctx.message.delete()
+        try:
+            await ctx.message.delete()
+        except discord.errors.Forbidden:
+            pass
 
         if not pattern.match(url):
             await ctx.send("Please send a valid url", delete_after=15)
