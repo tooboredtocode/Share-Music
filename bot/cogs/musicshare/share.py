@@ -97,8 +97,11 @@ class Share(commands.Cog):
                 "value": ctx.author.mention
             }]
         })
-
-        await message.edit(content="", embed=embed)
+         
+        try:
+            await message.edit(content="", embed=embed)
+        except discord.errors.NotFound:
+            await ctx.send(embed=embed)
 
 
 def setup(bot: Bot):
