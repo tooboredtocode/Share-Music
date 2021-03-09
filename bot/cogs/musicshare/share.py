@@ -36,9 +36,6 @@ sources = {
 
 class Share(commands.Cog):
 
-    def __init__(self, bot: Bot):
-        self.bot = bot
-
     @commands.command()
     async def share(self, ctx, url: str):
         try:
