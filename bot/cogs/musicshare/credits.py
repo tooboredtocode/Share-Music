@@ -9,17 +9,17 @@ class Credits(commands.Cog):
     @commands.command()
     async def invite(self, ctx):
         await ctx.send("Invite the bot here:\n"
-                 "https://discord.com/api/oauth2/authorize?client_id=818620296410955808&permissions=0&scope=bot")
+                 "<https://discord.com/api/oauth2/authorize?client_id=818620296410955808&permissions=0&scope=bot>")
 
     @commands.command()
     async def source(self, ctx):
         await ctx.send("You can find the code running this bot here:\n"
-                 "https://github.com/tooboredtocode/Share-Music")
+                 "<https://github.com/tooboredtocode/Share-Music>")
 
     @commands.command()
     async def credits(self, ctx):
         await ctx.send("Built by albedo#9999\n"
-                 "Powered by https://odesli.co")
+                 "Powered by <https://odesli.co>")
 
 
 def setup(bot: Bot):
