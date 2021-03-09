@@ -15,7 +15,7 @@ pattern = re.compile("^https:\/\/(?:"
                      ".*spotify\.com|"
                      ".*tidal\.com|"
                      ".*music\.yandex\..{1,3}|"
-                     ".*youtube\.com)")
+                     ".*youtu(?:\.be|be\.com)")
 
 sources = {
     "amazonMusic": "Amazon Music",
