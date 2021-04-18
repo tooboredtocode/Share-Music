@@ -37,7 +37,7 @@ sources = {
 class Share(commands.Cog):
 
     @commands.command()
-    async def share(self, ctx, url: str):
+    async def share(self, ctx: commands.Context, url: str):
 
         # try to delete the original message
         try:
@@ -75,12 +75,14 @@ class Share(commands.Cog):
         # get the song/album info
         song_album_info = dict()
         for provider in result["entitiesByUniqueId"]:
-            song_album_info[f"{result['entitiesByUniqueId'][provider]['apiProvider']}"] \
-                = {
-                "artist": result["entitiesByUniqueId"][provider]["artistName"],
-                "title": result["entitiesByUniqueId"][provider]["title"],
-                "thumbnail": result["entitiesByUniqueId"][provider]["thumbnailUrl"]
-            }
+            try:
+                song_album_info[f"{result['entitiesByUniqueId'][provider]['apiProvider']}"] = {
+                    "artist": result["entitiesByUniqueId"][provider]["artistName"],
+                    "title": result["entitiesByUniqueId"][provider]["title"],
+                    "thumbnail": result["entitiesByUniqueId"][provider]["thumbnailUrl"]
+                }
+            except KeyError:
+                pass
 
         # set the artist, title and thumbnail variables, since the data provided by youtube isn't very good
         if "itunes" in song_album_info:
