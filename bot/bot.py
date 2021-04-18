@@ -2,6 +2,7 @@ import traceback
 import discord
 
 from discord.ext import commands
+from discord_slash import SlashCommand
 
 from config.config import token
 
@@ -37,6 +38,8 @@ def run(cogs: list, debug=False, prefix=None, help_command=None):
         help_command=help_command,
         intents=discord.Intents.default()
     )
+
+    slash = SlashCommand(bot, override_type=True, sync_commands=True)
 
     bot.load_cogs(cogs)
     bot.run(token)

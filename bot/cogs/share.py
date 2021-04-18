@@ -3,6 +3,9 @@ import re
 import requests
 
 from discord.ext import commands
+from discord_slash import cog_ext, SlashContext
+from discord_slash.model import SlashCommandOptionType
+from discord_slash.utils.manage_commands import create_option
 
 from bot.bot import Bot
 
@@ -36,29 +39,34 @@ sources = {
 
 class Share(commands.Cog):
 
-    @commands.command()
-    async def share(self, ctx: commands.Context, url: str):
-
-        # try to delete the original message
-        try:
-            await ctx.message.delete()
-        except discord.errors.Forbidden:
-            pass
+    @cog_ext.cog_slash(
+        name="share",
+        description="Share music to all platforms, using song.link's api",
+        options=[
+            create_option(
+                name="url",
+                description="The link for the song/album",
+                option_type=SlashCommandOptionType.STRING,
+                required=True
+            )
+        ]
+    )
+    async def _share(self, ctx: SlashContext, url: str):
 
         # filter out bad requests
         if not pattern.match(url):
-            await ctx.send("Please send a valid url", delete_after=15)
+            await ctx.send(hidden=True, content="Please send a valid url")
             return
 
         # send placeholder message
-        message = await ctx.send("Please wait a moment...")
+        await ctx.defer()
 
         # get the info from song.link
         response = requests.get(f"https://api.song.link/v1-alpha.1/links?url={url}")
 
         # inform user about error
         if response.status_code != 200:
-            await message.edit(content="Error getting links", delete_after=15)
+            await ctx.send(content="Error getting links", delete_after=15)
             return
 
         # turn the request into a dict
@@ -124,18 +132,11 @@ class Share(commands.Cog):
             },
             "author": {
                 "name": artist
-            },
-            "fields": [{
-                "name": "sent by",
-                "value": ctx.author.mention
-            }]
+            }
         })
 
-        # try to edit the original message and if that fails send a new one
-        try:
-            await message.edit(content="", embed=embed)
-        except discord.errors.NotFound:
-            await ctx.send(embed=embed)
+        # send message
+        await ctx.send(embed=embed)
 
 
 def setup(bot: Bot):
