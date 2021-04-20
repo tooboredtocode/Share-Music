@@ -12,7 +12,7 @@ class Credits(commands.Cog):
     )
     async def _invite(self, ctx: SlashContext):
         await ctx.send(hidden=True, content="Invite the bot here:\n"
-                 "https://discord.com/api/oauth2/authorize?client_id=818620296410955808&permissions=0&scope=bot%20applications.commands")
+                "https://share-music.albedo.me/")
 
     @cog_ext.cog_slash(
         name="source",
