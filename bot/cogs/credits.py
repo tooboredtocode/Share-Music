@@ -8,7 +8,7 @@ class Credits(commands.Cog):
 
     @cog_ext.cog_slash(
         name="invite",
-        description="Get the invite link from the bot"
+        description="Get the invite link for the bot"
     )
     async def _invite(self, ctx: SlashContext):
         await ctx.send(hidden=True, content="Invite the bot here:\n"
@@ -23,7 +23,8 @@ class Credits(commands.Cog):
                  "https://github.com/tooboredtocode/Share-Music")
 
     @cog_ext.cog_slash(
-        name="credits"
+        name="credits",
+        description="People and Projects making this work"
     )
     async def _credits(self, ctx: SlashContext):
         await ctx.send(hidden=True, content="Built by albedo#9999\n"
