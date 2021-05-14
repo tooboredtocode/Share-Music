@@ -20,7 +20,7 @@ pattern = re.compile("^https:\/\/(?:"
                      ".*music\.yandex\..{1,3}|"
                      ".*youtu(?:\.be|be\.com))")
 
-sources = {
+source_identifier_to_name = {
     "amazonMusic": "Amazon Music",
     "amazonStore": "Amazon",
     "deezer": "Deezer",
@@ -34,6 +34,15 @@ sources = {
     "yandex": "Yandex",
     "youtube": "YouTube",
     "youtubeMusic": "YouTube Music"
+}
+
+source_priority = {
+    "itunes": 1,
+    "spotify": 2,
+    "tidal": 3,
+    "yandex": 4,
+    "soundcloud": 5,
+    "original_provider": 6
 }
 
 
@@ -72,51 +81,34 @@ class Share(commands.Cog):
         # turn the request into a dict
         result = response.json()
 
-        # get the links
-        links = list()
+        # get the links and store them with the markdown syntax already applied
+        links = []
         for source in result["linksByPlatform"]:
-            try:
-                links.append(f"[{sources[source]}]({result['linksByPlatform'][source]['url']})")
-            except KeyError:
-                links.append(f"[{source}]({result['linksByPlatform'][source]['url']})")
+            title = source_identifier_to_name[source] if source in source_identifier_to_name else source
+            url = result["linksByPlatform"][source]["url"]
 
-        # get the song/album info
-        song_album_info = dict()
-        for provider in result["entitiesByUniqueId"]:
+            links.append(f"[{title}]({url})")
+
+        # get important parts from the api response
+        reduced_info = {}
+        for key, value in result["entitiesByUniqueId"].items():
+            provider = value["apiProvider"] if key != result["entityUniqueId"] else "original_provider"
+            if provider not in source_priority:
+                continue
             try:
-                song_album_info[f"{result['entitiesByUniqueId'][provider]['apiProvider']}"] = {
-                    "artist": result["entitiesByUniqueId"][provider]["artistName"],
-                    "title": result["entitiesByUniqueId"][provider]["title"],
-                    "thumbnail": result["entitiesByUniqueId"][provider]["thumbnailUrl"]
+                reduced_info[source_priority[provider]] = {
+                    "artist": value["artistName"],
+                    "title": value["title"],
+                    "thumbnail": value["thumbnailUrl"]
                 }
             except KeyError:
                 pass
 
-        # set the artist, title and thumbnail variables, since the data provided by youtube isn't very good
-        if "itunes" in song_album_info:
-            artist = song_album_info["itunes"]["artist"]
-            title = song_album_info["itunes"]["title"]
-            thumbnail = song_album_info["itunes"]["thumbnail"]
-        elif "spotify" in song_album_info:
-            artist = song_album_info["itunes"]["artist"]
-            title = song_album_info["itunes"]["title"]
-            thumbnail = song_album_info["itunes"]["thumbnail"]
-        elif "tidal" in song_album_info:
-            artist = song_album_info["tidal"]["artist"]
-            title = song_album_info["tidal"]["title"]
-            thumbnail = song_album_info["tidal"]["thumbnail"]
-        elif "yandex" in song_album_info:
-            artist = song_album_info["yandex"]["artist"]
-            title = song_album_info["yandex"]["title"]
-            thumbnail = song_album_info["yandex"]["thumbnail"]
-        elif "soundcloud" in song_album_info:
-            artist = song_album_info["soundcloud"]["artist"]
-            title = song_album_info["soundcloud"]["title"]
-            thumbnail = song_album_info["soundcloud"]["thumbnail"]
-        else:
-            artist = result["entitiesByUniqueId"][result["entityUniqueId"]]["artistName"]
-            title = result["entitiesByUniqueId"][result["entityUniqueId"]]["title"]
-            thumbnail = result["entitiesByUniqueId"][result["entityUniqueId"]]["thumbnailUrl"]
+        # sort the dict
+        reduced_info = sorted(reduced_info).values()
+
+        # get the information
+        artist, title, thumbnail = [reduced_info[0][key] for key in ["artist", "title", "thumbnail"]]
 
         # create the discord embed
         embed = discord.Embed.from_dict({
