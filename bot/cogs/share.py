@@ -111,6 +111,8 @@ class Share(commands.Cog):
 
             links.append(f"[{title}]({url})")
 
+        links.sort(key=lambda chars: chars.upper())
+
         # get important parts from the api response
         reduced_info = {}
         for key, value in result["entitiesByUniqueId"].items():
