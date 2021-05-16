@@ -1,6 +1,6 @@
 import discord
 import re
-import requests
+import aiohttp
 
 from discord.ext import commands
 from discord_slash import cog_ext, SlashContext
@@ -51,24 +51,35 @@ source_priority = {
 
 class Share(commands.Cog):
 
+    def __init__(self, bot: Bot):
+        self.session = aiohttp.ClientSession()
+
+    def __del__(self):
+        if not self.session.closed:
+            if self.session.connector_owner:
+                self.session.connector.close()
+            self.session._connector = None
+
     @classmethod
-    def get_dominant_colours(cls, url: str):
+    async def get_dominant_colours(cls, session: aiohttp.ClientSession,  url: str):
 
         # get the image from the url
-        response = requests.get(url)
-        thumbnail = Image.open(BytesIO(response.content))
+        async with session.get(url) as response:
+            if response.status != 200:
+                return 0
+            thumbnail = Image.open(BytesIO(await response.read()))
 
-        # downsize the image to increase processing and turn it into a palette
-        thumbnail.thumbnail((150, 150))
-        thumbnail = thumbnail.convert('P', palette=Image.WEB, colors=10)
+            # downsize the image to increase processing and turn it into a palette
+            thumbnail.thumbnail((150, 150))
+            thumbnail = thumbnail.convert('P', palette=Image.WEB, colors=10)
 
-        # get the most dominant colours
-        palette = thumbnail.getpalette()
-        color_counts = sorted(thumbnail.getcolors(), reverse=True)
-        palette_index = color_counts[randint(0, 3)][1]
-        dominant_color = palette[palette_index * 3:palette_index * 3 + 3]
+            # get the most dominant colours
+            palette = thumbnail.getpalette()
+            color_counts = sorted(thumbnail.getcolors(), reverse=True)
+            palette_index = color_counts[randint(0, 3)][1]
+            dominant_color = palette[palette_index * 3:palette_index * 3 + 3]
 
-        return tuple(dominant_color)
+            return tuple(dominant_color)
 
     @cog_ext.cog_slash(
         name="share",
@@ -93,71 +104,70 @@ class Share(commands.Cog):
         await ctx.defer()
 
         # get the info from song.link
-        response = requests.get(f"https://api.song.link/v1-alpha.1/links?url={url}")
+        async with self.session.get(f"https://api.song.link/v1-alpha.1/links?url={url}") as response:
+            # inform user about error
+            if response.status != 200:
+                await ctx.send(content="Error getting links", delete_after=15)
+                return
 
-        # inform user about error
-        if response.status_code != 200:
-            await ctx.send(content="Error getting links", delete_after=15)
-            return
+            # turn the request into a dict
+            result = await response.json()
 
-        # turn the request into a dict
-        result = response.json()
+            # get the links and store them with the markdown syntax already applied
+            links = []
+            for source, link in result["linksByPlatform"].items():
+                title = source_identifier_to_name[source] if source in source_identifier_to_name else source
+                url = link["url"]
 
-        # get the links and store them with the markdown syntax already applied
-        links = []
-        for source, link in result["linksByPlatform"].items():
-            title = source_identifier_to_name[source] if source in source_identifier_to_name else source
-            url = link["url"]
+                links.append(f"[{title}]({url})")
 
-            links.append(f"[{title}]({url})")
+            links.sort(key=lambda chars: chars.upper())
 
-        links.sort(key=lambda chars: chars.upper())
+            # get important parts from the api response
+            reduced_info = {}
+            for key, value in result["entitiesByUniqueId"].items():
+                provider = "original_provider" if key == result["entityUniqueId"] and value["apiProvider"] not in source_priority else value["apiProvider"]
+                if provider not in source_priority:
+                    continue
+                try:
+                    reduced_info[source_priority[provider]] = {
+                        "artist": value["artistName"],
+                        "title": value["title"],
+                        "thumbnail": value["thumbnailUrl"]
+                    }
+                except KeyError:
+                    pass
 
-        # get important parts from the api response
-        reduced_info = {}
-        for key, value in result["entitiesByUniqueId"].items():
-            provider = "original_provider" if key == result["entityUniqueId"] and value["apiProvider"] not in source_priority else value["apiProvider"]
-            if provider not in source_priority:
-                continue
-            try:
-                reduced_info[source_priority[provider]] = {
-                    "artist": value["artistName"],
-                    "title": value["title"],
-                    "thumbnail": value["thumbnailUrl"]
+            # sort the dict
+            reduced_info = list(map(lambda key: reduced_info[key], sorted(reduced_info)))
+
+            # get the information
+            artist, title, thumbnail = [reduced_info[0][key] for key in ["artist", "title", "thumbnail"]]
+
+            # get the dominant colours
+            colour = await self.get_dominant_colours(self.session, thumbnail)
+            colour_int = (colour[0] << 16) + (colour[1] << 8) + colour[2]
+
+            # create the discord embed
+            embed = discord.Embed.from_dict({
+                "title": title,
+                "type": "rich",
+                "color": colour_int,
+                "description": f"{' | '.join(links)}",
+                "url": f"{result['pageUrl']}",
+                "footer": {
+                    "text": "Powered by odesli.co"
+                },
+                "thumbnail": {
+                    "url": thumbnail
+                },
+                "author": {
+                    "name": artist
                 }
-            except KeyError:
-                pass
+            })
 
-        # sort the dict
-        reduced_info = list(map(lambda key: reduced_info[key], sorted(reduced_info)))
-
-        # get the information
-        artist, title, thumbnail = [reduced_info[0][key] for key in ["artist", "title", "thumbnail"]]
-
-        # get the dominant colours
-        colour = self.get_dominant_colours(thumbnail)
-        colour_int = (colour[0] << 16) + (colour[1] << 8) + colour[2]
-
-        # create the discord embed
-        embed = discord.Embed.from_dict({
-            "title": title,
-            "type": "rich",
-            "color": colour_int,
-            "description": f"{' | '.join(links)}",
-            "url": f"{result['pageUrl']}",
-            "footer": {
-                "text": "Powered by odesli.co"
-            },
-            "thumbnail": {
-                "url": thumbnail
-            },
-            "author": {
-                "name": artist
-            }
-        })
-
-        # send message
-        await ctx.send(embed=embed)
+            # send message
+            await ctx.send(embed=embed)
 
 
 def setup(bot: Bot):
