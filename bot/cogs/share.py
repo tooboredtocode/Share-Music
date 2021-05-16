@@ -6,6 +6,9 @@ from discord.ext import commands
 from discord_slash import cog_ext, SlashContext
 from discord_slash.model import SlashCommandOptionType
 from discord_slash.utils.manage_commands import create_option
+from io import BytesIO
+from random import randint
+from PIL import Image
 
 from bot.bot import Bot
 
@@ -48,6 +51,25 @@ source_priority = {
 
 class Share(commands.Cog):
 
+    @classmethod
+    def get_dominant_colours(cls, url: str):
+
+        # get the image from the url
+        response = requests.get(url)
+        thumbnail = Image.open(BytesIO(response.content))
+
+        # downsize the image to increase processing and turn it into a palette
+        thumbnail.thumbnail((150, 150))
+        thumbnail = thumbnail.convert('P', palette=Image.WEB, colors=10)
+
+        # get the most dominant colours
+        palette = thumbnail.getpalette()
+        color_counts = sorted(thumbnail.getcolors(), reverse=True)
+        palette_index = color_counts[randint(0, 3)][1]
+        dominant_color = palette[palette_index * 3:palette_index * 3 + 3]
+
+        return tuple(dominant_color)
+
     @cog_ext.cog_slash(
         name="share",
         description="Share music to all platforms, using song.link's api",
@@ -83,16 +105,16 @@ class Share(commands.Cog):
 
         # get the links and store them with the markdown syntax already applied
         links = []
-        for source in result["linksByPlatform"]:
+        for source, link in result["linksByPlatform"].items():
             title = source_identifier_to_name[source] if source in source_identifier_to_name else source
-            url = result["linksByPlatform"][source]["url"]
+            url = link["url"]
 
             links.append(f"[{title}]({url})")
 
         # get important parts from the api response
         reduced_info = {}
         for key, value in result["entitiesByUniqueId"].items():
-            provider = value["apiProvider"] if key != result["entityUniqueId"] else "original_provider"
+            provider = "original_provider" if key == result["entityUniqueId"] and value["apiProvider"] not in source_priority else value["apiProvider"]
             if provider not in source_priority:
                 continue
             try:
@@ -105,15 +127,20 @@ class Share(commands.Cog):
                 pass
 
         # sort the dict
-        reduced_info = sorted(reduced_info).values()
+        reduced_info = list(map(lambda key: reduced_info[key], sorted(reduced_info)))
 
         # get the information
         artist, title, thumbnail = [reduced_info[0][key] for key in ["artist", "title", "thumbnail"]]
+
+        # get the dominant colours
+        colour = self.get_dominant_colours(thumbnail)
+        colour_int = (colour[0] << 16) + (colour[1] << 8) + colour[2]
 
         # create the discord embed
         embed = discord.Embed.from_dict({
             "title": title,
             "type": "rich",
+            "color": colour_int,
             "description": f"{' | '.join(links)}",
             "url": f"{result['pageUrl']}",
             "footer": {
