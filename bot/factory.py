@@ -2,6 +2,8 @@ import discord
 
 from discord.ext import commands
 
+from loguru import logger
+
 
 class Bot(commands.Bot):
 
@@ -31,13 +33,13 @@ class Bot(commands.Bot):
                 self.load_extension(extension)
                 success += 1
             except Exception as e:
-                print(f"Cog {extension} experienced an error during loading: {e}")
+                logger.error(f"Cog {extension} experienced an error during loading: {e}")
                 fail += 1
 
-        print(f"Cog loading complete! (Total: {success + fail} | Loaded: {success} | Failed: {fail})")
+        logger.info(f"Cog loading complete! (Total: {success + fail} | Loaded: {success} | Failed: {fail})")
 
     async def on_error(self, event: str, *args, **kwargs):
-        print(f"Runtime error: {event}\n")
+        logger.exception(f"Runtime error: {event}\n")
 
     async def on_command_error(self, context, exception):
         if self.extra_events.get("on_command_error", None):
@@ -50,4 +52,4 @@ class Bot(commands.Bot):
         if cog and commands.Cog._get_overridden_method(cog.cog_command_error) is not None:
             return
 
-        print(f"Ignoring exception in command {context.command}: {exception}\n")
+        logger.opt(exception=True).info(f"Ignoring exception in command {context.command}:\n{exception}\n")

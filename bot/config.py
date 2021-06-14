@@ -19,6 +19,9 @@ def _recursive_update(defaults: dict, custom: dict):
                 defaults[key].update(custom[key])
             else:
                 _recursive_update(defaults[key], custom[key])
+        elif isinstance(value, list) and "!!include_default" in custom[key]:
+            defaults[key].extend(custom[key])
+            defaults[key].remove("!!include_default")
         else:
             defaults[key] = custom[key]
 
@@ -47,8 +50,56 @@ class _ConfigParser(type):
             yield name, getattr(cls, name)
 
 
+class _ListConfigParser(type):
+
+    def __len__(cls):
+        return len(_CONFIG[cls.section])
+
+    def __getattr__(cls, index: int):
+        if index == "cls":
+            return None
+        elif cls.cls:
+            return cls.cls(**_CONFIG[cls.section][index])
+        else:
+            return _CONFIG[cls.section][index]
+
+    def __getitem__(cls, index: int):
+        return cls.__getattr__(index)
+
+    def __iter__(cls):
+        for index in range(cls.__len__()):
+            yield cls.__getattr__(index)
+
+
 class Tokens(metaclass=_ConfigParser):
     section = "tokens"
 
     prod: str
     dev: Optional[str]
+
+
+class LoggingConfig(collections.abc.Mapping):
+
+    def __init__(self, **kwargs):
+        for key, value in kwargs.items():
+            if key == "sink":
+                if value == "sys.stdout":
+                    self.sink = sys.stdout
+                    continue
+
+            setattr(self, key, value)
+
+    def __getitem__(self, key):
+        return getattr(self, key)
+
+    def __iter__(self):
+        for key in self.__dict__.keys():
+            yield key
+
+    def __len__(self):
+        return len(self.__dict__)
+
+
+class LoggingConfigs(metaclass=_ListConfigParser):
+    section = "logging"
+    cls = LoggingConfig
