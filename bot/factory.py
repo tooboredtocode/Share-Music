@@ -20,11 +20,10 @@ class Bot(commands.Bot):
         )
 
     def load_extensions(self):
-        extensions = [
-            "jishaku",
-            "bot.cogs.share",
-            "bot.cogs.credits"
-        ]
+        from bot.utils.extensions import EXTENSIONS
+
+        extensions = set(EXTENSIONS)
+        extensions.add("jishaku")
 
         success, fail = 0, 0
         for extension in extensions:
