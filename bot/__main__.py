@@ -1,7 +1,11 @@
-from bot.bot import run
+from discord_slash import SlashCommand
 
-run([
-    "jishaku",
-    "bot.cogs.share",
-    "bot.cogs.credits"
-])
+from config.config import token
+from bot.factory import Bot
+
+
+instance = Bot.create()
+slash = SlashCommand(instance, override_type=True, sync_commands=True)
+instance.load_extensions()
+instance.run(token)
+

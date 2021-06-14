@@ -1,7 +1,7 @@
 from discord.ext import commands
 from discord_slash import cog_ext, SlashContext
 
-from bot.bot import Bot
+from bot.factory import Bot
 
 
 class Credits(commands.Cog):

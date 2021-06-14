@@ -10,7 +10,7 @@ from io import BytesIO
 from random import randint
 from PIL import Image
 
-from bot.bot import Bot
+from bot.factory import Bot
 
 pattern = re.compile("^https:\/\/(?:"
                      ".*amazon\.com|"
