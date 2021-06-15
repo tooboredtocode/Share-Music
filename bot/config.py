@@ -5,7 +5,14 @@ import yaml
 from pathlib import Path
 from typing import Mapping, Optional
 
-with open("config.defaults.yaml", encoding="UTF-8") as file:
+from bot import root_path
+
+if not Path(default_config_path := root_path / "config.defaults.yaml").exists():
+    raise FileNotFoundError(
+        f"Cannot find default config! If you accidentally moved it, place it here: {default_config_path}"
+    )
+
+with open(default_config_path, encoding="UTF-8") as file:
     _CONFIG = yaml.safe_load(file)
 
 
@@ -26,8 +33,8 @@ def _recursive_update(defaults: dict, custom: dict):
             defaults[key] = custom[key]
 
 
-if Path("config.yaml").exists():
-    with open("config.yaml", encoding="UTF-8") as file:
+if Path(user_config_path := root_path / "config.yaml").exists():
+    with open(user_config_path, encoding="UTF-8") as file:
         user_config = yaml.safe_load(file)
     _recursive_update(_CONFIG, user_config)
 
