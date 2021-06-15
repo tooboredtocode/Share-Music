@@ -94,6 +94,9 @@ class LoggingConfig(collections.abc.Mapping):
                     self.sink = sys.stdout
                     continue
 
+                self.sink = root_path / "logs" / value
+                continue
+
             setattr(self, key, value)
 
     def __getitem__(self, key):

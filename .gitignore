@@ -2,4 +2,6 @@
 __pycache__/
 
 config.yaml
-*.log
+
+logs/*
+!*.gitkeep
