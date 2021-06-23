@@ -1,3 +1,6 @@
+general:
+  prefix: ms!
+
 tokens:
   dev: None
   prod: None

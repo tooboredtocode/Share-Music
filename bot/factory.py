@@ -4,6 +4,8 @@ import discord_slash
 from discord.ext import commands
 from loguru import logger
 
+from bot.config import General
+
 
 class Bot(commands.Bot):
 
@@ -15,7 +17,7 @@ class Bot(commands.Bot):
         intents.members = False
 
         return cls(
-            command_prefix="ms!",
+            command_prefix=General.prefix,
             max_messages=10_000,
             allowed_mentions=discord.AllowedMentions(everyone=False, roles=False, users=False),
             intents=intents,

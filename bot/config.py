@@ -78,6 +78,12 @@ class _ListConfigParser(type):
             yield cls.__getattr__(index)
 
 
+class General(metaclass=_ConfigParser):
+    section = "general"
+
+    prefix: str
+
+
 class Tokens(metaclass=_ConfigParser):
     section = "tokens"
 
