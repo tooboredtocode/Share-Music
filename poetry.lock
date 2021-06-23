@@ -117,11 +117,20 @@ python-versions = ">=2.7, !=3.0.*, !=3.1.*, !=3.2.*, !=3.3.*, !=3.4.*"
 
 [[package]]
 name = "discord-py-slash-command"
-version = "1.2.2"
-description = "A simple discord slash command handler for discord.py."
+version = "2.0.3"
+description = "A simple interaction handler for discord.py."
 category = "main"
 optional = false
 python-versions = ">=3.6"
+
+[package.dependencies]
+aiohttp = "*"
+"discord.py" = "*"
+
+[package.extras]
+dev = ["black", "flake8", "isort", "sphinx", "sphinx-rtd-theme"]
+lint = ["black", "flake8", "isort", "sphinx", "sphinx-rtd-theme"]
+readthedocs = ["sphinx", "sphinx-rtd-theme"]
 
 [[package]]
 name = "discord.py"
@@ -140,7 +149,7 @@ voice = ["PyNaCl (>=1.3.0,<1.5)"]
 
 [[package]]
 name = "humanize"
-version = "3.8.0"
+version = "3.9.0"
 description = "Python humanize utilities"
 category = "main"
 optional = false
@@ -173,23 +182,24 @@ test = ["pytest", "pytest-cov"]
 
 [[package]]
 name = "jishaku"
-version = "1.20.0.220"
+version = "2.0.0"
 description = "A discord.py extension including useful tools for bot development and debugging."
 category = "main"
 optional = false
-python-versions = ">=3.6.0"
+python-versions = ">=3.8.0"
 
 [package.dependencies]
-braceexpand = ">=0.1.5"
-"discord.py" = ">=1.4.0"
-humanize = "*"
+braceexpand = ">=0.1.7"
+"discord.py" = ">=1.7.2"
+humanize = ">=3.7.0"
 import-expression = ">=1.0.0,<2.0.0"
 
 [package.extras]
-docs = ["sphinx (>=3.1.2)", "sphinxcontrib-asyncio"]
+docs = ["sphinx (>=3.5.4)", "sphinxcontrib-asyncio"]
 procinfo = ["psutil"]
-test = ["coverage", "flake8", "isort (<4.3.5)", "pylint", "pytest", "pytest-cov", "pytest-mock"]
-voice = ["PyNaCl (>=1.3.0)", "youtube-dl"]
+publish = ["jinja2"]
+test = ["click", "coverage", "flake8", "isort", "pylint", "pytest", "pytest-cov", "pytest-mock"]
+voice = ["discord.py[voice] (>=1.7.2)", "youtube-dl"]
 
 [[package]]
 name = "loguru"
@@ -337,7 +347,7 @@ multidict = ">=4.0"
 [metadata]
 lock-version = "1.1"
 python-versions = "^3.9"
-content-hash = "1b95ce1a951ff6bc415fbd4a258697014636142c1ce600d75f80c8aab8f3870c"
+content-hash = "c9c19cdd6cd0de472fee8756063171ee2190ee6a3eadac5c425774f98cdfab0a"
 
 [metadata.files]
 aiohttp = [
@@ -416,16 +426,16 @@ colorama = [
     {file = "colorama-0.4.4.tar.gz", hash = "sha256:5941b2b48a20143d2267e95b1c2a7603ce057ee39fd88e7329b0c292aa16869b"},
 ]
 discord-py-slash-command = [
-    {file = "discord-py-slash-command-1.2.2.tar.gz", hash = "sha256:192b4454bb5ca9e6032812a4142469782ab7a8a4f93c13fb04bb5a2ff100ddfb"},
-    {file = "discord_py_slash_command-1.2.2-py3-none-any.whl", hash = "sha256:5539b931af40b3bc91ee0a8ed1e97a58400c442ef542007db9dda315dce90144"},
+    {file = "discord-py-slash-command-2.0.3.tar.gz", hash = "sha256:7fc16c1ea84421dc1b593a69840abfa2e1fe8c8108b81d8cf340069c6fe23595"},
+    {file = "discord_py_slash_command-2.0.3-py3-none-any.whl", hash = "sha256:c7ae5933dcc0c589dcc85902e0218bdec9501e0ac6106a94e61fedc51d0576bf"},
 ]
 "discord.py" = [
     {file = "discord.py-1.7.3-py3-none-any.whl", hash = "sha256:c6f64db136de0e18e090f6752ea68bdd4ab0a61b82dfe7acecefa22d6477bb0c"},
     {file = "discord.py-1.7.3.tar.gz", hash = "sha256:462cd0fe307aef8b29cbfa8dd613e548ae4b2cb581d46da9ac0d46fb6ea19408"},
 ]
 humanize = [
-    {file = "humanize-3.8.0-py3-none-any.whl", hash = "sha256:37711ee4f10525fa94e0133353d3c20888dd3b78570ec6e53005ba04f75fc3b8"},
-    {file = "humanize-3.8.0.tar.gz", hash = "sha256:bd6e8aa313ca07ed882695f89e4bf09e05049d2d489d4e2bf34b74c0da8d1613"},
+    {file = "humanize-3.9.0-py3-none-any.whl", hash = "sha256:2cc4f7d2f5994ea9fcddd4b681ddea9abd23baa8cc64bd0af041a0162636f31c"},
+    {file = "humanize-3.9.0.tar.gz", hash = "sha256:892a5b7b87763c4c6997a58382c2b1f4614048a2e01c23ef1bb0456e6f9d4d5d"},
 ]
 idna = [
     {file = "idna-3.2-py3-none-any.whl", hash = "sha256:14475042e284991034cb48e06f6851428fb14c4dc953acd9be9a5e95c7b6dd7a"},
@@ -436,12 +446,10 @@ import-expression = [
     {file = "import_expression-1.1.4.tar.gz", hash = "sha256:06086a6ab3bfa528b1c478e633d6adf2b3a990e31440f6401b0f3ea12b0659a9"},
 ]
 jishaku = [
-    {file = "jishaku-1.20.0.220-py3-none-any.whl", hash = "sha256:2ced3fb5b5d3c82cd9e938591eb5867da06f8acefd71450a044d7e79e17e04d9"},
-    {file = "jishaku-1.20.0.220-py3.6.egg", hash = "sha256:2075e8aa8c6b24b0691df2471146b9a6a2285685639f27cb78f29bc5c4eca56b"},
-    {file = "jishaku-1.20.0.220-py3.7.egg", hash = "sha256:af565758d5ec2ab97df497bc3cd840b71660c58f66fb31d6042ce425f41849a5"},
-    {file = "jishaku-1.20.0.220-py3.8.egg", hash = "sha256:fbe6e9160df5688538becea0c32558ddccbd026cd0820cd83122c3419ec4625b"},
-    {file = "jishaku-1.20.0.220-py3.9.egg", hash = "sha256:ba4cdab5eb3893b213d0aaf82e711665d6dedab3182c6c071507f22ec7f981ff"},
-    {file = "jishaku-1.20.0.220.tar.gz", hash = "sha256:eb6d2e2fc9d4f89ca98d20be7487b3354ae745e0cf14e234d31df573054bcf9e"},
+    {file = "jishaku-2.0.0-py3-none-any.whl", hash = "sha256:276e186e6ef99a23cb667efe64a0ae2de9e49f7cfd10f5fbfe4db4eb30379183"},
+    {file = "jishaku-2.0.0-py3.8.egg", hash = "sha256:9e31e43117c14cd785ec8578dde524bf00d94186cd0178d61759183c8d706319"},
+    {file = "jishaku-2.0.0-py3.9.egg", hash = "sha256:1e3626c85b60c93ed32798ea32291b23e5b39031e7c48f903fb896437e7c0a78"},
+    {file = "jishaku-2.0.0.tar.gz", hash = "sha256:7ac6fd1f2a048fae78299b800be555aec012631e40c96438f7d9201538b09c0c"},
 ]
 loguru = [
     {file = "loguru-0.5.3-py3-none-any.whl", hash = "sha256:f8087ac396b5ee5f67c963b495d615ebbceac2796379599820e324419d53667c"},

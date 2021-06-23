@@ -7,9 +7,9 @@ authors = ["tooboredtocode <bored-coder@tooboredtocode.dev>"]
 [tool.poetry.dependencies]
 python = "^3.9"
 "discord.py" = "^1.7"
-discord-py-slash-command = "^1.1"
+discord-py-slash-command = "^2.0"
 loguru = "^0.5.3"
-jishaku = "^1.20"
+jishaku = "^2.0"
 pillow = "^8.2"
 PyYAML = "^5.4"
 
