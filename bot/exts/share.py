@@ -10,7 +10,6 @@ from io import BytesIO
 from json import JSONDecodeError
 from loguru import logger
 from random import randint
-from typing import Literal
 from PIL import Image
 
 from bot.factory import Bot

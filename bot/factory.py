@@ -1,7 +1,7 @@
 import discord
+import discord_slash
 
 from discord.ext import commands
-
 from loguru import logger
 
 
@@ -53,3 +53,16 @@ class Bot(commands.Bot):
             return
 
         logger.opt(exception=True).info(f"Ignoring exception in command {context.command}:\n{exception}\n")
+
+
+class SlashCommand(discord_slash.SlashCommand):
+
+    @classmethod
+    def create(cls, client: Bot):
+        return cls(
+            client=client,
+            sync_commands=True,
+            delete_from_unused_guilds=True,
+            sync_on_cog_reload=True,
+            override_type=True
+        )
