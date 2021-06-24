@@ -2,11 +2,11 @@ general:
   prefix: ms!
 
 tokens:
-  dev: None
-  prod: None
+  dev:
+  prod:
 
 sentry:
-  dsn: None
+  dsn:
 
 logging:
   - sink: sys.stdout
