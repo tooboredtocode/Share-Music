@@ -5,6 +5,9 @@ tokens:
   dev: None
   prod: None
 
+sentry:
+  dsn: None
+
 logging:
   - sink: sys.stdout
     level: INFO

@@ -1,7 +1,8 @@
 from bot.config import Tokens
 from bot.factory import Bot, SlashCommand
-from bot.utils import logging
+from bot.utils import logging, sentry
 
+sentry.configure()
 logging.configure()
 
 instance = Bot.create()

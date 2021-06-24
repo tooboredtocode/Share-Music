@@ -10,6 +10,7 @@ from io import BytesIO
 from json import JSONDecodeError
 from loguru import logger
 from random import randint
+from sentry_sdk import capture_exception
 from PIL import Image
 
 from bot.factory import Bot
@@ -166,6 +167,7 @@ class Share(commands.Cog):
 
             except KeyError as e:
                 await ctx.send(content="Error getting links, song.link returned unexpected response", delete_after=15)
+                capture_exception(e)
                 logger.opt(exception=True).warning(f"song.link returned a faulty response for url: {url}, KeyError: {e}")
                 return
 

@@ -3,6 +3,7 @@ import discord_slash
 
 from discord.ext import commands
 from loguru import logger
+from sentry_sdk import capture_exception
 
 from bot.config import General
 
@@ -41,7 +42,8 @@ class Bot(commands.Bot):
         logger.info(f"Cog loading complete! (Total: {success + fail} | Loaded: {success} | Failed: {fail})")
 
     async def on_error(self, event: str, *args, **kwargs):
-        logger.exception(f"Runtime error: {event}\n")
+        capture_exception()
+        logger.exception(f"Runtime error in {event}\n")
 
     async def on_command_error(self, context, exception):
         if self.extra_events.get("on_command_error", None):
@@ -53,8 +55,18 @@ class Bot(commands.Bot):
         cog = context.cog
         if cog and commands.Cog._get_overridden_method(cog.cog_command_error) is not None:
             return
-
-        logger.opt(exception=True).info(f"Ignoring exception in command {context.command}:\n{exception}\n")
+        
+        if isinstance(exception, (
+            commands.UserInputError,
+            commands.CheckFailure,
+            commands.CommandNotFound,
+            commands.CommandOnCooldown,
+            commands.ArgumentParsingError
+        )):
+            logger.opt(exception=True).info(f"Ignoring exception in command {context.command}:\n{exception}\n")
+        else:
+            capture_exception(exception)
+            logger.exception(f"Ignoring exception in command {context.command}:\n{exception}\n")
 
 
 class SlashCommand(discord_slash.SlashCommand):

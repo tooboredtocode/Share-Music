@@ -91,6 +91,12 @@ class Tokens(metaclass=_ConfigParser):
     dev: Optional[str]
 
 
+class Sentry(metaclass=_ConfigParser):
+    section = "sentry"
+
+    dsn: str
+
+
 class LoggingConfig(collections.abc.Mapping):
 
     def __init__(self, **kwargs):
