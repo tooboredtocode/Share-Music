@@ -14,6 +14,7 @@ def before_breadcrumb(crumb, hint):
 def configure():
     sentry_sdk.init(
         dsn=Sentry.dsn,
+        release="music-share@1.0.0",
         before_breadcrumb=before_breadcrumb,
         integrations=[
             LoggingIntegration(level=None, event_level=None)
