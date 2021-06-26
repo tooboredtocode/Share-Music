@@ -37,10 +37,10 @@ jobs:
         env:
           SENTRY_AUTH_TOKEN: ${{ secrets.SENTRY_AUTH_TOKEN }}
           SENTRY_ORG: bored-corp
-          SENTRY_PROJECT: music-share
+          SENTRY_PROJECT: share-music
         with:
           environment: production
-          version: music-share@${{ needs.getversion.outputs.version }}
+          version: share-music@${{ needs.getversion.outputs.version }}
 
   settag:
     name: Create Git Tag from Version

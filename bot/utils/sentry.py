@@ -30,7 +30,7 @@ def get_release() -> Union[str, None]:
     except (OSError, IOError):
         pass
 
-    return f"music-share@{release}"
+    return f"share-music@{release}"
 
 
 def configure():
