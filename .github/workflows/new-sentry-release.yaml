@@ -1,20 +1,86 @@
-name: New Sentry Release
+name: Release Versions on Several Platforms
 
 on:
   push:
-    branches: [ master ]
+    branches:
+      - master
 
 jobs:
-  deploy:
+  getversion:
+    name: Get Version
+    runs-on: ubuntu-latest
+    outputs:
+      version: ${{ steps.version.outputs.version }}
+    steps:
+      - name: Checkout Code
+        uses: actions/checkout@v2
+        with:
+          ref: ${{ github.head_ref }}
+          fetch-depth: 0
+
+      - name: Git Version
+        id: version
+        uses: codacy/git-version@2.2.0
+        with:
+          prefix: v
+          dev-branch: develop
+
+  sentry:
+    name: Create Sentry Release
+    needs: getversion
     runs-on: ubuntu-latest
     steps:
-    - uses: actions/checkout@v2
-    - name: Sentry Release
-      uses: getsentry/action-release@v1.0.0
-      env:
-        SENTRY_AUTH_TOKEN: ${{ secrets.SENTRY_AUTH_TOKEN }}
-        SENTRY_ORG: ${{ secrets.SENTRY_ORG }}
-        SENTRY_PROJECT: ${{ secrets.SENTRY_PROJECT }}
-      with:
-        environment: production
-        version: 'music-share@1.0.0'
+      - name: Checkout Code
+        uses: actions/checkout@v2
+      - name: Push the Release to Sentry
+        uses: getsentry/action-release@v1.0.0
+        env:
+          SENTRY_AUTH_TOKEN: ${{ secrets.SENTRY_AUTH_TOKEN }}
+          SENTRY_ORG: bored-corp
+          SENTRY_PROJECT: music-share
+        with:
+          environment: production
+          version: music-share@${{ needs.getversion.outputs.version }}
+
+  settag:
+    name: Create Git Tag from Version
+    needs: getversion
+    runs-on: ubuntu-latest
+    steps:
+      - name: Create the Tag
+        uses: actions/github-script@v3
+        with:
+          github-token: ${{ secrets.GITHUB_TOKEN }}
+          script: |
+            await github.git.createRef({
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              ref: "refs/tags/${{ needs.getversion.outputs.version }}",
+              sha: context.sha
+            })
+
+  releasedraft:
+    name: Create a Github Release Draft with the Changelog
+    needs:
+      - getversion
+      - settag
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout Code
+        uses: actions/checkout@v2
+        with:
+          ref: ${{ github.head_ref }}
+          fetch-depth: 0
+      - name: Build Changelog
+        id: changelog
+        uses: mikepenz/release-changelog-builder-action@v1
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+      - name: Create Draft
+        uses: softprops/action-gh-release@v1
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        with:
+          body: ${{ steps.changelog.outputs.changelog }}
+          draft: true
+          tag_name: ${{ needs.getversion.outputs.version }}
