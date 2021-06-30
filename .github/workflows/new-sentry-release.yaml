@@ -58,29 +58,3 @@ jobs:
               ref: "refs/tags/${{ needs.getversion.outputs.version }}",
               sha: context.sha
             })
-
-  releasedraft:
-    name: Create a Github Release Draft with the Changelog
-    needs:
-      - getversion
-      - settag
-    runs-on: ubuntu-latest
-    steps:
-      - name: Checkout Code
-        uses: actions/checkout@v2
-        with:
-          ref: ${{ github.head_ref }}
-          fetch-depth: 0
-      - name: Build Changelog
-        id: changelog
-        uses: mikepenz/release-changelog-builder-action@v1
-        env:
-          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-      - name: Create Draft
-        uses: softprops/action-gh-release@v1
-        env:
-          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-        with:
-          body: ${{ steps.changelog.outputs.changelog }}
-          draft: true
-          tag_name: ${{ needs.getversion.outputs.version }}
