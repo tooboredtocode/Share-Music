@@ -36,7 +36,7 @@ def get_release() -> Union[str, None]:
 def configure():
     sentry_sdk.init(
         dsn=Sentry.dsn,
-        release="music-share@1.0.0",
+        release=get_release(),
         before_breadcrumb=before_breadcrumb,
         integrations=[
             LoggingIntegration(level=None, event_level=None)
