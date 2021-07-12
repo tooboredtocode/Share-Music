@@ -20,10 +20,12 @@ jobs:
 
       - name: Git Version
         id: version
-        uses: codacy/git-version@2.2.0
+        uses: codacy/git-version@2.5.3
         with:
           prefix: v
           dev-branch: develop
+          minor-identifier: "/feat(?:ure)?:/"
+          major-identifier: "/(?:BREAKING CHANGE:)|(?:^[a-z]+!:)/"
 
   sentry:
     name: Create Sentry Release
@@ -33,7 +35,7 @@ jobs:
       - name: Checkout Code
         uses: actions/checkout@v2
       - name: Push the Release to Sentry
-        uses: getsentry/action-release@v1.0.0
+        uses: getsentry/action-release@v1
         env:
           SENTRY_AUTH_TOKEN: ${{ secrets.SENTRY_AUTH_TOKEN }}
           SENTRY_ORG: bored-corp
