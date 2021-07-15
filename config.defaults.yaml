@@ -10,6 +10,22 @@ sentry:
 
 logging:
   - sink: sys.stdout
+    level: WARNING
+    format: "<green>{time:YYYY-MM-DD HH:mm:ss.SSS}</green> | <level>{level}</level> | <fg #FFA500>{name}</fg #FFA500> <red>-</red> <level>{message}</level>"
+    colorize: True
+    backtrace: False
+    diagnose: True
+  - sink: "music-share.log"
     level: INFO
     format: "<green>{time:YYYY-MM-DD HH:mm:ss.SSS}</green> | <level>{level}</level> | <fg #FFA500>{name}</fg #FFA500> <red>-</red> <level>{message}</level>"
     colorize: True
+    backtrace: False
+    diagnose: True
+    retention: "48h"
+  - sink: "loki.log"
+    level: DEBUG
+    format: "{level} | {name} - {message}"
+    serialize: True
+    backtrace: False
+    diagnose: False
+    retention: "48h"

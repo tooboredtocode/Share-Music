@@ -97,7 +97,7 @@ class Sentry(metaclass=_ConfigParser):
     dsn: str
 
 
-class LoggingConfig(collections.abc.Mapping):
+class LoggingHandler(collections.abc.Mapping):
 
     def __init__(self, **kwargs):
         for key, value in kwargs.items():
@@ -122,6 +122,6 @@ class LoggingConfig(collections.abc.Mapping):
         return len(self.__dict__)
 
 
-class LoggingConfigs(metaclass=_ListConfigParser):
+class LoggingHandlers(metaclass=_ListConfigParser):
     section = "logging"
-    cls = LoggingConfig
+    cls = LoggingHandler
