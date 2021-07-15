@@ -112,9 +112,9 @@ gateway_logger = logger.patch(lambda record: record.update(name="discord.gateway
 def log_gateway_events(data):
     remove_sensitive_info(data, ["token"])
 
-    key = next(iter(data))
-    event = data[key].get("t")
-    op_code = data[key].get("op")
+    direction = data["gateway"].get("direction")
+    event = data["gateway"].get("t")
+    op_code = data["gateway"].get("op")
 
     frame, depth = logging.currentframe(), 2
     while frame.f_code.co_filename in (logging.__file__, sentry_sdk.integrations.logging.__file__):
@@ -122,7 +122,7 @@ def log_gateway_events(data):
         depth += 1
 
     gateway_logger.debug(
-        f"{'Received' if key == 'gateway_in' else 'Dispatched'} gateway event "
+        f"{'Received' if direction == 'in' else 'Dispatched'} gateway event "
         f"{op_codes[op_code]}{event if event else ''}",
         extra=data
     )
@@ -131,12 +131,14 @@ def log_gateway_events(data):
 # Monkey Patch Functions for Discord.py to log all sent payloads
 async def send_as_json(self, data):
     await discord.gateway.DiscordWebSocket.send_heartbeat_copy(self, data)
-    log_gateway_events({"gateway_out": data})
+    data["direction"] = "out"
+    log_gateway_events({"gateway": data})
 
 
 async def send_heartbeat(self, data):
     await discord.gateway.DiscordWebSocket.send_as_json_copy(self, data)
-    log_gateway_events({"gateway_out": data})
+    data["direction"] = "out"
+    log_gateway_events({"gateway": data})
 
 
 async def received_message(self, msg):
@@ -149,8 +151,9 @@ async def received_message(self, msg):
         msg = msg.decode('utf-8')
         self._buffer = bytearray()
     data = json.loads(msg)
+    data["direction"] = "in"
 
-    log_gateway_events({"gateway_in": data})
+    log_gateway_events({"gateway": data})
 
     await discord.gateway.DiscordWebSocket.received_message_copy(self, msg)
 
@@ -223,8 +226,13 @@ async def request(self, route, *, files=None, form=None, **kwargs):
                     http_logger.debug(
                         f"{method} {url} returned: {r.status}",
                         extra={
-                            "http_out": kwargs.get("data"),
-                            "http_back": data if 300 > r.status >= 200 else None
+                            "http": {
+                                "method": method,
+                                "path": url,
+                                "payload": kwargs.get("data"),
+                                "status": r.status,
+                                "response": data if 300 > r.status >= 200 else None
+                            }
                         }
                     )
 
