@@ -1,7 +1,8 @@
 from bot.config import Tokens
 from bot.factory import Bot, SlashCommand
-from bot.utils import logging, sentry
+from bot.utils import logging, monkey_patch, sentry
 
+monkey_patch.patch()
 sentry.configure()
 logging.configure()
 
