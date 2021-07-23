@@ -358,3 +358,4 @@ def configure():
     log_filter.add_filter("discord.gateway", "Unknown event ")
     log_filter.add_filter("discord.http", "has received")
     log_filter.add_filter("discord.http", "has returned")
+    log_filter.add_filter("PIL.TiffImagePlugin", "tag: ")
