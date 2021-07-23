@@ -5,6 +5,12 @@ tokens:
   dev:
   prod:
 
+metrics:
+  port: 9991
+
+  channel: 868102822665785375
+  frequency: 60
+
 sentry:
   dsn:
 
