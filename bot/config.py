@@ -91,6 +91,15 @@ class Tokens(metaclass=_ConfigParser):
     dev: Optional[str]
 
 
+class Metrics(metaclass=_ConfigParser):
+    section = "metrics"
+
+    port: int
+
+    channel: int
+    frequency: float
+
+
 class Sentry(metaclass=_ConfigParser):
     section = "sentry"
 

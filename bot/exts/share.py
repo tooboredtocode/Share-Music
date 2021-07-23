@@ -9,11 +9,13 @@ from discord_slash.utils.manage_commands import create_option
 from io import BytesIO
 from json import JSONDecodeError
 from loguru import logger
+from prometheus_async.aio import time
 from random import randint
 from sentry_sdk import capture_exception
 from PIL import Image
 
 from bot.factory import Bot
+from bot.utils.metrics import command_histogram, third_party_api_histogram, Timer
 
 pattern = re.compile(
     "^https:\/\/(?:"
@@ -53,9 +55,16 @@ source_priority = [
 ]
 
 
+def remove_unique_ids(url: str) -> str:
+    path_components = url.split("/")
+
+    return "/".join(path_components[:4])
+
+
 class Share(commands.Cog):
 
     def __init__(self, bot: Bot):
+        self.bot = bot
         self.session = aiohttp.ClientSession()
 
     def __del__(self):
@@ -70,7 +79,11 @@ class Share(commands.Cog):
             return 0, 0, 0
 
         # get the image from the url
+        timer = Timer()
         async with self.session.get(url) as response:
+            response_time = timer.stop()
+            third_party_api_histogram.labels(method="GET", url=remove_unique_ids(url)).observe(response_time)
+
             if response.status != 200:
                 return 0, 0, 0
             thumbnail = Image.open(BytesIO(await response.read()))
@@ -99,6 +112,7 @@ class Share(commands.Cog):
             )
         ]
     )
+    @time(command_histogram.labels(command="share"))
     async def _share(self, ctx: SlashContext, url: str):
 
         # filter out bad requests
@@ -109,8 +123,14 @@ class Share(commands.Cog):
         # send placeholder message
         await ctx.defer()
 
+        timer = Timer()
         # get the info from song.link
         async with self.session.get(f"https://api.song.link/v1-alpha.1/links?url={url}") as response:
+            response_time = timer.stop()
+            third_party_api_histogram.labels(
+                method="GET",
+                url="https://api.song.link/v1-alpha.1/links").observe(response_time)
+
             # inform user about error
             if response.status != 200:
                 await ctx.send(content="Error getting links, song.link couldn't respond", delete_after=15)

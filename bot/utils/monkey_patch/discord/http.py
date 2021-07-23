@@ -21,6 +21,16 @@ def sanitize_url(url: str) -> str:
     return "/".join(path_components)
 
 
+def remove_ids(url: str) -> str:
+    path_components = url.split("/")
+
+    for index, component in enumerate(path_components):
+        if component.isdigit():
+            path_components[index] = "--id--"
+
+    return "/".join(path_components)
+
+
 async def request(self, route, *, files=None, form=None, **kwargs):
     bucket = route.bucket
     method = route.method
@@ -79,11 +89,16 @@ async def request(self, route, *, files=None, form=None, **kwargs):
                 kwargs['data'] = form_data
 
             try:
+                timer = Timer()
                 async with self._HTTPClient__session.request(method, url, **kwargs) as r:
+                    response_time = timer.stop()
                     # even errors have text involved in them so this is safe to call
                     data = await discord.http.json_or_text(r)
 
                     sanitized_url = sanitize_url(url)
+                    without_ids = remove_ids(sanitized_url)
+
+                    api_histogram.labels(method=method, path=without_ids).observe(response_time)
 
                     http_logger.debug(
                         f"{method} {url} returned: {r.status}",
