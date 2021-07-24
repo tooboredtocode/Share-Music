@@ -84,6 +84,17 @@ class Share(commands.Cog):
             response_time = timer.stop()
             third_party_api_histogram.labels(method="GET", url=remove_unique_ids(url)).observe(response_time)
 
+            logger.debug(
+                f"GET {url} returned: {response.status}",
+                extra={
+                    "share_music": {
+                        "method": "GET",
+                        "path": url,
+                        "status": response.status,
+                    }
+                }
+            )
+
             if response.status != 200:
                 return 0, 0, 0
             thumbnail = Image.open(BytesIO(await response.read()))
@@ -130,6 +141,20 @@ class Share(commands.Cog):
             third_party_api_histogram.labels(
                 method="GET",
                 url="https://api.song.link/v1-alpha.1/links").observe(response_time)
+
+            body = await response.text()
+
+            logger.debug(
+                f"GET {url} returned: {response.status}",
+                extra={
+                    "share_music": {
+                        "method": "GET",
+                        "path": f"https://api.song.link/v1-alpha.1/links?url={url}",
+                        "status": response.status,
+                        "response": "expected" if response.status == 200 else body
+                    }
+                }
+            )
 
             # inform user about error
             if response.status != 200:

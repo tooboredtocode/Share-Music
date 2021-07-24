@@ -5,6 +5,7 @@ import time
 
 from discord.ext import commands, tasks
 from functools import wraps
+from loguru import logger
 from typing import Union
 
 from bot.config import Metrics as MetricsConf
@@ -65,6 +66,21 @@ class Metrics(commands.Cog):
             ).observe(response_time)
             
             if r.status != 200:
+                body = ""
+                try:
+                    body = await r.text()
+                except LookupError:
+                    pass
+
+                logger.warning(
+                    f"Discord status returned: {r.status}",
+                    extra={
+                        "discord_status": {
+                            "status": r.status,
+                            "response": body
+                        }
+                    }
+                )
                 return None
             
             data = json.loads(await r.text(encoding='utf-8'))

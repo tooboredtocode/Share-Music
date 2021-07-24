@@ -78,12 +78,24 @@ def debug(self, message, extra=None, *args, **kwargs):
     logger.__class__._log(self, "DEBUG", None, False, tuple(options), message, args, kwargs)
 
 
+def warning(self, message, extra=None, *args, **kwargs):
+    options = list(self._options)
+
+    if extra is not None:
+        static_extra = options[8]
+        options[8] = {**extra, **static_extra}
+
+    # noinspection PyProtectedMember
+    logger.__class__._log(self, "WARNING", None, False, tuple(options), message, args, kwargs)
+
+
 def configure():
     # noinspection PyArgumentList
     logging.basicConfig(handlers=[InterceptHandler()], level=0)
 
     # monkey patching
     logger.__class__.debug = debug
+    logger.__class__.warning = warning
 
     logger.remove()
 
