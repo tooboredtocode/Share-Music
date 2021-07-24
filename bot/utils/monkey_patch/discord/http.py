@@ -18,6 +18,10 @@ def sanitize_url(url: str) -> str:
         path_components[7] = "--token--"
     if path_components[5] == "interactions":
         path_components[7] = "--token--"
+    if len(path_components) > 9:
+        if path_components[9] == "reactions":
+            path_components[10] == "--id--"
+
 
     return "/".join(path_components)
 
