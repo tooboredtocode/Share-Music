@@ -25,6 +25,11 @@ api_gauge.labels(action="send")
 api_gauge.labels(action="edit")
 api_gauge.labels(action="delete")
 
+api_processing_gauge = Gauge(
+    name="discord_api_processing_time_seconds",
+    documentation="The API processing time discord reports",
+)
+
 BUCKETS = (.005, .01, .025, .05, .075, .1, .25, .5, .75, 1.0, 2.5, 5.0, 7.5, 10.0, float("INF"))
 
 api_histogram = Histogram(
