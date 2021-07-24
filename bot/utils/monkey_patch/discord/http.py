@@ -5,6 +5,7 @@ import urllib
 
 from loguru import logger
 
+from bot.config import Metrics as MetricsConf
 from bot.utils.metrics import api_histogram, Timer
 
 http_logger = logger.patch(lambda record: record.update(name="discord.http"))
@@ -29,6 +30,9 @@ def remove_ids(url: str) -> str:
             path_components[index] = "--id--"
 
     return "/".join(path_components)
+
+
+IGNORE_PATH = f"channels/{MetricsConf.channel}"
 
 
 async def request(self, route, *, files=None, form=None, **kwargs):
@@ -100,18 +104,19 @@ async def request(self, route, *, files=None, form=None, **kwargs):
 
                     api_histogram.labels(method=method, path=without_ids).observe(response_time)
 
-                    http_logger.debug(
-                        f"{method} {url} returned: {r.status}",
-                        extra={
-                            "http": {
-                                "method": method,
-                                "path": sanitized_url,
-                                "payload": kwargs.get("data"),
-                                "status": r.status,
-                                "response": data if 300 > r.status >= 200 else None
+                    if (IGNORE_PATH not in url) or r.status not in [200, 204]:
+                        http_logger.debug(
+                            f"{method} {url} returned: {r.status}",
+                            extra={
+                                "http": {
+                                    "method": method,
+                                    "path": sanitized_url,
+                                    "payload": kwargs.get("data"),
+                                    "status": r.status,
+                                    "response": data if 300 > r.status >= 200 else None
+                                }
                             }
-                        }
-                    )
+                        )
 
                     # check if we have rate limit header information
                     remaining = r.headers.get('X-Ratelimit-Remaining')
