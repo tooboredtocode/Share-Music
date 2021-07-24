@@ -3,6 +3,7 @@ import json
 
 from loguru import logger
 
+from bot.config import Metrics as MetricsConf
 from bot.utils.monkey_patch import remove_sensitive_info
 
 op_codes = {
@@ -48,6 +49,9 @@ async def send_heartbeat(self, data):
     log_gateway_events({"gateway": data})
 
 
+IGNORED_CHANNEL_STRING = str(MetricsConf.channel)
+
+
 async def received_message(self, msg):
     if type(msg) is bytes:
         self._buffer.extend(msg)
@@ -59,7 +63,14 @@ async def received_message(self, msg):
         self._buffer = bytearray()
     data = json.loads(msg)
     data["direction"] = "in"
+    channel_id = 0
 
-    log_gateway_events({"gateway": data})
+    try:
+        channel_id = data["d"]["channel_id"]
+    except (KeyError, TypeError):
+        pass
+
+    if channel_id != IGNORED_CHANNEL_STRING:
+        log_gateway_events({"gateway": data})
 
     await discord.gateway.DiscordWebSocket.received_message_copy(self, msg)
