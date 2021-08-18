@@ -18,7 +18,7 @@ def get_release() -> Union[str, None]:
     try:
         release = (
             subprocess.Popen(
-                ["git", "describe", "--abbrev=0"],
+                ["git", "describe", "--tags", "--abbrev=0"],
                 stdout=subprocess.PIPE,
                 stderr=subprocess.DEVNULL,
                 stdin=subprocess.DEVNULL,
