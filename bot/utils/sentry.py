@@ -8,8 +8,14 @@ from bot.config import Sentry
 
 
 def before_breadcrumb(crumb, hint):
-    if not crumb["data"]["extra"]:
+    data = crumb.get("data")
+
+    if not data:
+        return crumb
+
+    if not data.get("extra"):
         crumb["data"].pop("extra")
+
     return crumb
 
 
