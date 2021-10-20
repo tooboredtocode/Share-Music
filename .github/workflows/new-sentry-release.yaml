@@ -22,7 +22,6 @@ jobs:
         id: version
         uses: codacy/git-version@2.5.3
         with:
-          prefix: v
           dev-branch: develop
           minor-identifier: "/feat(?:ure)?:/"
           major-identifier: "/(?:BREAKING CHANGE:)|(?:^[a-z]+!:)/"
