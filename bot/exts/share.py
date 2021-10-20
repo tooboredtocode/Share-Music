@@ -17,7 +17,7 @@ from PIL import Image
 from bot.factory import Bot
 from bot.utils.metrics import command_histogram, third_party_api_histogram, Timer
 
-pattern = re.compile(
+PATTERN = re.compile(
     "^https:\/\/(?:"
     ".*amazon\.com|"
     ".*deezer\.com|"
@@ -30,23 +30,40 @@ pattern = re.compile(
     ".*youtu(?:\.be|be\.com))"
 )
 
-source_identifier_to_name = {
-    "amazonMusic": "Amazon Music",
-    "amazonStore": "Amazon",
-    "deezer": "Deezer",
-    "appleMusic": "Apple Music",
-    "itunes": "iTunes",
-    "pandora": "Pandora",
-    "napster": "Napster",
-    "soundcloud": "Soundcloud",
+SOURCE_IDENTIFIER_TO_NAME = {
     "spotify": "Spotify",
-    "tidal": "Tidal",
-    "yandex": "Yandex",
+    "itunes": "iTunes",
+    "appleMusic": "Apple Music",
     "youtube": "YouTube",
-    "youtubeMusic": "YouTube Music"
+    "youtubeMusic": "YouTube Music",
+    "googleStore": "Google Store",
+    "pandora": "Pandora",
+    "deezer": "Deezer",
+    "tidal": "Tidal",
+    "amazonStore": "Amazon Store",
+    "amazonMusic": "Amazon Music",
+    "soundcloud": "SoundCloud",
+    "napster": "Napster",
+    "yandex": "Yandex",
+    "spinrilla": "Spinrilla",
+    "audius": "Audius"
 }
 
-source_priority = [
+SUPPORTED_SOURCES = [
+    "Spotify",
+    "iTunes",
+    "Apple Music",
+    "YouTube",
+    "YouTube Music",
+    "Pandora",
+    "Deezer",
+    "Tidal",
+    "Amazon Music",
+    "SoundCloud",
+    "Yandex"
+]
+
+SOURCE_PRIORITY = [
     "itunes",
     "spotify",
     "tidal",
@@ -127,8 +144,12 @@ class Share(commands.Cog):
     async def _share(self, ctx: SlashContext, url: str):
 
         # filter out bad requests
-        if not pattern.match(url):
-            await ctx.send(hidden=True, content="Please send a valid url")
+        if not PATTERN.match(url):
+            await ctx.send(
+                hidden=True,
+                content=f"Please send a valid url, I can only work with links from the following platforms:\n"
+                        f"({', '.join(SUPPORTED_SOURCES[:-1])} and {SUPPORTED_SOURCES[-1]})"
+            )
             return
 
         # send placeholder message
@@ -140,7 +161,8 @@ class Share(commands.Cog):
             response_time = timer.stop()
             third_party_api_histogram.labels(
                 method="GET",
-                url="https://api.song.link/v1-alpha.1/links").observe(response_time)
+                url="https://api.song.link/v1-alpha.1/links"
+            ).observe(response_time)
 
             body = await response.text()
 
@@ -162,14 +184,16 @@ class Share(commands.Cog):
                 logger.info(
                     f"Couldn't get response from song.link for url: {url} "
                     f"song.link responded with code: {response.status}"
-                    )
+                )
                 return
 
             # turn the request into a dict
             try:
                 result = await response.json()
             except JSONDecodeError as e:
-                await ctx.send(content="Error getting links, song.link returned an unexpected response", delete_after=15)
+                await ctx.send(
+                    content="Error getting links, song.link returned an unexpected response", delete_after=15
+                )
                 logger.opt(exception=True).warning(f"song.link returned a faulty response for url: {url}, error: {e}")
                 return
 
@@ -178,7 +202,7 @@ class Share(commands.Cog):
                 # get the links and store them with the markdown syntax already applied
                 links = []
                 for source, link in result["linksByPlatform"].items():
-                    title = source_identifier_to_name.get(source) or source
+                    title = SOURCE_IDENTIFIER_TO_NAME.get(source) or source
                     url = link["url"]
 
                     links.append(f"[{title}]({url})")
@@ -192,7 +216,7 @@ class Share(commands.Cog):
                 colour_int = None
 
                 # get important parts from the api response
-                sp = source_priority.copy()
+                sp = SOURCE_PRIORITY.copy()
                 sp.append(result["entitiesByUniqueId"][result["entityUniqueId"]]["apiProvider"])
                 current_max = len(sp) - 1
                 for key, value in result["entitiesByUniqueId"].items():
@@ -213,7 +237,9 @@ class Share(commands.Cog):
             except KeyError as e:
                 await ctx.send(content="Error getting links, song.link returned unexpected response", delete_after=15)
                 capture_exception(e)
-                logger.opt(exception=True).warning(f"song.link returned a faulty response for url: {url}, KeyError: {e}")
+                logger.opt(exception=True).warning(
+                    f"song.link returned a faulty response for url: {url}, KeyError: {e}"
+                )
                 return
 
             # get the dominant colours
@@ -221,22 +247,24 @@ class Share(commands.Cog):
             colour_int = (colour[0] << 16) + (colour[1] << 8) + colour[2]
 
             # create the discord embed
-            embed = discord.Embed.from_dict({
-                "title": title,
-                "type": "rich",
-                "color": colour_int,
-                "description": f"{' | '.join(links)}",
-                "url": f"{result['pageUrl']}",
-                "footer": {
-                    "text": "Powered by odesli.co"
-                },
-                "thumbnail": {
-                    "url": thumbnail
-                },
-                "author": {
-                    "name": artist
+            embed = discord.Embed.from_dict(
+                {
+                    "title": title,
+                    "type": "rich",
+                    "color": colour_int,
+                    "description": f"{' | '.join(links)}",
+                    "url": f"{result['pageUrl']}",
+                    "footer": {
+                        "text": "Powered by odesli.co"
+                    },
+                    "thumbnail": {
+                        "url": thumbnail
+                    },
+                    "author": {
+                        "name": artist
+                    }
                 }
-            })
+            )
 
             # send message
             await ctx.send(embed=embed)
