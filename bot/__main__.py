@@ -2,7 +2,7 @@ from prometheus_client import start_http_server
 
 from bot.config import (
     Metrics as MetricsConf,
-    Tokens
+    General
 )
 from bot.factory import Bot, SlashCommand
 from bot.utils import logging, monkey_patch, sentry
@@ -15,4 +15,4 @@ start_http_server(MetricsConf.port)
 instance = Bot.create()
 slash = SlashCommand(instance)
 instance.load_extensions()
-instance.run(Tokens.dev or Tokens.prod)
+instance.run(General.token)
