@@ -12,13 +12,19 @@ def patch():
 
     from bot.utils.monkey_patch.discord import gateway, http
 
-    discord.gateway.DiscordWebSocket.send_as_json_copy = discord.gateway.DiscordWebSocket.send_as_json
+    discord.gateway.DiscordWebSocket.send_as_json_copy = (
+        discord.gateway.DiscordWebSocket.send_as_json
+    )
     discord.gateway.DiscordWebSocket.send_as_json = gateway.send_as_json
 
-    discord.gateway.DiscordWebSocket.send_heartbeat_copy = discord.gateway.DiscordWebSocket.send_heartbeat
+    discord.gateway.DiscordWebSocket.send_heartbeat_copy = (
+        discord.gateway.DiscordWebSocket.send_heartbeat
+    )
     discord.gateway.DiscordWebSocket.send_heartbeat = gateway.send_heartbeat
 
-    discord.gateway.DiscordWebSocket.received_message_copy = discord.gateway.DiscordWebSocket.received_message
+    discord.gateway.DiscordWebSocket.received_message_copy = (
+        discord.gateway.DiscordWebSocket.received_message
+    )
     discord.gateway.DiscordWebSocket.received_message = gateway.received_message
 
     discord.http.HTTPClient.request = http.request

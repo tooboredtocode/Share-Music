@@ -51,32 +51,32 @@ async def request(self, route, *, files=None, form=None, **kwargs):
 
     # header creation
     headers = {
-        'User-Agent': self.user_agent,
-        'X-Ratelimit-Precision': 'millisecond',
+        "User-Agent": self.user_agent,
+        "X-Ratelimit-Precision": "millisecond",
     }
 
     if self.token is not None:
-        headers['Authorization'] = 'Bot ' + self.token if self.bot_token else self.token
+        headers["Authorization"] = "Bot " + self.token if self.bot_token else self.token
     # some checking if it's a JSON request
-    if 'json' in kwargs:
-        headers['Content-Type'] = 'application/json'
-        kwargs['data'] = discord.utils.to_json(kwargs.pop('json'))
+    if "json" in kwargs:
+        headers["Content-Type"] = "application/json"
+        kwargs["data"] = discord.utils.to_json(kwargs.pop("json"))
 
     try:
-        reason = kwargs.pop('reason')
+        reason = kwargs.pop("reason")
     except KeyError:
         pass
     else:
         if reason:
-            headers['X-Audit-Log-Reason'] = urllib.parse.quote(reason, safe='/ ')
+            headers["X-Audit-Log-Reason"] = urllib.parse.quote(reason, safe="/ ")
 
-    kwargs['headers'] = headers
+    kwargs["headers"] = headers
 
     # Proxy support
     if self.proxy is not None:
-        kwargs['proxy'] = self.proxy
+        kwargs["proxy"] = self.proxy
     if self.proxy_auth is not None:
-        kwargs['proxy_auth'] = self.proxy_auth
+        kwargs["proxy_auth"] = self.proxy_auth
 
     if not self._global_over.is_set():
         # wait until the global lock is complete
@@ -93,11 +93,13 @@ async def request(self, route, *, files=None, form=None, **kwargs):
                 form_data = aiohttp.FormData()
                 for params in form:
                     form_data.add_field(**params)
-                kwargs['data'] = form_data
+                kwargs["data"] = form_data
 
             try:
                 timer = Timer()
-                async with self._HTTPClient__session.request(method, url, **kwargs) as r:
+                async with self._HTTPClient__session.request(
+                    method, url, **kwargs
+                ) as r:
                     response_time = timer.stop()
                     # even errors have text involved in them so this is safe to call
                     data = await discord.http.json_or_text(r)
@@ -105,7 +107,9 @@ async def request(self, route, *, files=None, form=None, **kwargs):
                     sanitized_url = sanitize_url(url)
                     without_ids = remove_ids(sanitized_url)
 
-                    api_histogram.labels(method=method, path=without_ids).observe(response_time)
+                    api_histogram.labels(method=method, path=without_ids).observe(
+                        response_time
+                    )
 
                     if (IGNORE_PATH not in url) or r.status not in [200, 204]:
                         http_logger.debug(
@@ -116,16 +120,18 @@ async def request(self, route, *, files=None, form=None, **kwargs):
                                     "path": sanitized_url,
                                     "payload": kwargs.get("data"),
                                     "status": r.status,
-                                    "response": data if 300 > r.status >= 200 else None
+                                    "response": data if 300 > r.status >= 200 else None,
                                 }
-                            }
+                            },
                         )
 
                     # check if we have rate limit header information
-                    remaining = r.headers.get('X-Ratelimit-Remaining')
-                    if remaining == '0' and r.status != 429:
+                    remaining = r.headers.get("X-Ratelimit-Remaining")
+                    if remaining == "0" and r.status != 429:
                         # we've depleted our current bucket
-                        delta = discord.utils._parse_ratelimit_header(r, use_clock=self.use_clock)
+                        delta = discord.utils._parse_ratelimit_header(
+                            r, use_clock=self.use_clock
+                        )
                         http_logger.debug(
                             f"A rate limit bucket has been exhausted (bucket: {bucket}, retry: {delta})."
                         )
@@ -138,19 +144,19 @@ async def request(self, route, *, files=None, form=None, **kwargs):
 
                     # we are being rate limited
                     if r.status == 429:
-                        if not r.headers.get('Via'):
+                        if not r.headers.get("Via"):
                             # Banned by Cloudflare more than likely.
                             raise discord.errors.HTTPException(r, data)
 
                         # sleep a bit
-                        retry_after = data['retry_after'] / 1000.0
+                        retry_after = data["retry_after"] / 1000.0
                         http_logger.warning(
                             f"We are being rate limited. Retrying in {retry_after:.2f} "
-                            f"seconds. Handled under the bucket \"{bucket}\""
+                            f'seconds. Handled under the bucket "{bucket}"'
                         )
 
                         # check if it's a global rate limit
-                        is_global = data.get('global', False)
+                        is_global = data.get("global", False)
                         if is_global:
                             http_logger.warning(
                                 f"Global rate limit has been hit. "
@@ -159,13 +165,15 @@ async def request(self, route, *, files=None, form=None, **kwargs):
                             self._global_over.clear()
 
                         await asyncio.sleep(retry_after)
-                        http_logger.debug('Done sleeping for the rate limit. Retrying...')
+                        http_logger.debug(
+                            "Done sleeping for the rate limit. Retrying..."
+                        )
 
                         # release the global lock now that the
                         # global rate limit has passed
                         if is_global:
                             self._global_over.set()
-                            http_logger.debug('Global rate limit is now over.')
+                            http_logger.debug("Global rate limit is now over.")
 
                         continue
 

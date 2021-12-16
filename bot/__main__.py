@@ -1,9 +1,6 @@
 from prometheus_client import start_http_server
 
-from bot.config import (
-    Metrics as MetricsConf,
-    General
-)
+from bot.config import Metrics as MetricsConf, General
 from bot.factory import Bot, SlashCommand
 from bot.utils import logging, monkey_patch, sentry
 

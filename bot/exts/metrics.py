@@ -10,7 +10,13 @@ from typing import Union
 
 from bot.config import Metrics as MetricsConf
 from bot.factory import Bot
-from bot.utils.metrics import api_gauge, api_processing_gauge, gateway_gauge, third_party_api_histogram, Timer
+from bot.utils.metrics import (
+    api_gauge,
+    api_processing_gauge,
+    gateway_gauge,
+    third_party_api_histogram,
+    Timer,
+)
 
 
 def time_it(func: callable) -> callable:
@@ -28,7 +34,6 @@ def time_it(func: callable) -> callable:
 
 
 class Metrics(commands.Cog):
-
     def __init__(self, bot: Bot):
         self.bot: Bot = bot
         self.session = aiohttp.ClientSession()
@@ -55,16 +60,17 @@ class Metrics(commands.Cog):
     @time_it
     async def test_delete(self, message: discord.Message):
         await message.delete()
-        
+
     async def get_discord_stats(self) -> Union[int, None]:
         timer = Timer()
-        async with self.session.get("https://discordstatus.com/metrics-display/5k2rt9f7pmny/day.json") as r:
+        async with self.session.get(
+            "https://discordstatus.com/metrics-display/5k2rt9f7pmny/day.json"
+        ) as r:
             response_time = timer.stop()
             third_party_api_histogram.labels(
-                method="GET",
-                url="https://discordstatus.com/metrics-display"
+                method="GET", url="https://discordstatus.com/metrics-display"
             ).observe(response_time)
-            
+
             if r.status != 200:
                 body = ""
                 try:
@@ -74,16 +80,11 @@ class Metrics(commands.Cog):
 
                 logger.warning(
                     f"Discord status returned: {r.status}",
-                    extra={
-                        "discord_status": {
-                            "status": r.status,
-                            "response": body
-                        }
-                    }
+                    extra={"discord_status": {"status": r.status, "response": body}},
                 )
                 return None
-            
-            data = json.loads(await r.text(encoding='utf-8'))
+
+            data = json.loads(await r.text(encoding="utf-8"))
 
             try:
                 return data["summary"]["last"]
