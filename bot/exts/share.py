@@ -220,7 +220,7 @@ class Share(commands.Cog):
                 sp.append(result["entitiesByUniqueId"][result["entityUniqueId"]]["apiProvider"])
                 current_max = len(sp) - 1
                 for key, value in result["entitiesByUniqueId"].items():
-                    if not ((provider := value["apiProvider"]) in sp):
+                    if not ((provider := value.get("apiProvider")) in sp):
                         continue
 
                     if (priority := sp.index(provider)) > current_max:

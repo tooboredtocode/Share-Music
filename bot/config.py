@@ -1,3 +1,4 @@
+import os
 import sys
 import collections
 import yaml
@@ -6,6 +7,33 @@ from pathlib import Path
 from typing import Mapping, Optional
 
 from bot import root_path
+
+
+# Copyright (c) 2018 Python Discord
+# License: https://github.com/python-discord/bot/blob/main/LICENSE
+def _env_var_constructor(loader, node):
+    default = None
+
+    # Check if the node is a plain string value
+    if node.id == 'scalar':
+        value = loader.construct_scalar(node)
+        key = str(value)
+    else:
+        # The node value is a list
+        value = loader.construct_sequence(node)
+
+        if len(value) >= 2:
+            # If we have at least two values, then we have both a key and a default value
+            default = value[1]
+            key = value[0]
+        else:
+            # Otherwise, we just have a key
+            key = value[0]
+
+    return os.getenv(key, default)
+
+
+yaml.SafeLoader.add_constructor("!ENV", _env_var_constructor)
 
 if not Path(default_config_path := root_path / "config.defaults.yaml").exists():
     raise FileNotFoundError(
@@ -82,13 +110,7 @@ class General(metaclass=_ConfigParser):
     section = "general"
 
     prefix: str
-
-
-class Tokens(metaclass=_ConfigParser):
-    section = "tokens"
-
-    prod: str
-    dev: Optional[str]
+    token: str
 
 
 class Metrics(metaclass=_ConfigParser):

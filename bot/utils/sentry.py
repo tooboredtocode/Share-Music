@@ -1,3 +1,4 @@
+import os
 import sentry_sdk
 import subprocess
 
@@ -20,21 +21,9 @@ def before_breadcrumb(crumb, hint):
 
 
 def get_release() -> Union[str, None]:
-    release = None
-    try:
-        release = (
-            subprocess.Popen(
-                ["git", "describe", "--tags", "--abbrev=0"],
-                stdout=subprocess.PIPE,
-                stderr=subprocess.DEVNULL,
-                stdin=subprocess.DEVNULL,
-            )
-                .communicate()[0]
-                .strip()
-                .decode("utf-8")
-        )
-    except (OSError, IOError):
-        pass
+    release = os.environ.get("VERSION")
+    if release == "":
+        release = "dev"
 
     return f"share-music@{release}"
 
