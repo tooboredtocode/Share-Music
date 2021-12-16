@@ -4,7 +4,7 @@ import collections
 import yaml
 
 from pathlib import Path
-from typing import Mapping, Optional
+from typing import Mapping
 
 from bot import root_path
 
@@ -15,7 +15,7 @@ def _env_var_constructor(loader, node):
     default = None
 
     # Check if the node is a plain string value
-    if node.id == 'scalar':
+    if node.id == "scalar":
         value = loader.construct_scalar(node)
         key = str(value)
     else:
@@ -68,7 +68,6 @@ if Path(user_config_path := root_path / "config.yaml").exists():
 
 
 class _ConfigParser(type):
-
     def __getattr__(cls, name):
         name = name.lower()
 
@@ -86,7 +85,6 @@ class _ConfigParser(type):
 
 
 class _ListConfigParser(type):
-
     def __len__(cls):
         return len(_CONFIG[cls.section])
 
@@ -129,7 +127,6 @@ class Sentry(metaclass=_ConfigParser):
 
 
 class LoggingHandler(collections.abc.Mapping):
-
     def __init__(self, **kwargs):
         for key, value in kwargs.items():
             if key == "sink":

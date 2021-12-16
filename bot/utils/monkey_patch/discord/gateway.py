@@ -33,7 +33,7 @@ def log_gateway_events(data):
     gateway_logger.debug(
         f"{'Received' if direction == 'in' else 'Dispatched'} gateway event "
         f"{op_codes[op_code]}{event if event else ''}",
-        extra=data
+        extra=data,
     )
 
 
@@ -56,10 +56,10 @@ async def received_message(self, msg):
     if type(msg) is bytes:
         self._buffer.extend(msg)
 
-        if len(msg) < 4 or msg[-4:] != b'\x00\x00\xff\xff':
+        if len(msg) < 4 or msg[-4:] != b"\x00\x00\xff\xff":
             return
         msg = self._zlib.decompress(self._buffer)
-        msg = msg.decode('utf-8')
+        msg = msg.decode("utf-8")
         self._buffer = bytearray()
     data = json.loads(msg)
     data["direction"] = "in"

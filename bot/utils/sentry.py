@@ -33,7 +33,5 @@ def configure():
         dsn=Sentry.dsn,
         release=get_release(),
         before_breadcrumb=before_breadcrumb,
-        integrations=[
-            LoggingIntegration(level=None, event_level=None)
-        ]
+        integrations=[LoggingIntegration(level=None, event_level=None)],
     )
