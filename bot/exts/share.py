@@ -118,7 +118,7 @@ class Share(commands.Cog):
             # get the most dominant colours
             palette = thumbnail.getpalette()
             color_counts = sorted(thumbnail.getcolors(), reverse=True)
-            palette_index = color_counts[randint(0, 3)][1]
+            palette_index = color_counts[randint(0, min(3, len(color_counts) - 1))][1]
             dominant_color = palette[palette_index * 3 : palette_index * 3 + 3]
 
             return tuple(dominant_color)

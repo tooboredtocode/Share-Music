@@ -14,9 +14,6 @@ WORKDIR /bot
 COPY pyproject.toml poetry.lock ./
 RUN poetry install --no-dev
 
-# Define version build argument
-ARG version="dev"
-
 # Set version environment variable for Sentry
 ENV VERSION=$version
 
