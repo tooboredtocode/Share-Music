@@ -18,16 +18,16 @@ from bot.factory import Bot
 from bot.utils.metrics import command_histogram, third_party_api_histogram, Timer
 
 PATTERN = re.compile(
-    "^https:\/\/(?:"
-    ".*amazon\.com|"
-    ".*deezer\.com|"
-    ".*music\.apple\.com|"
-    ".*pandora.*\.com|"
-    "soundcloud\.com|"
-    ".*spotify\.com|"
-    ".*tidal\.com|"
-    ".*music\.yandex\..{1,3}|"
-    ".*youtu(?:\.be|be\.com))"
+    r"^https:\/\/(?:"
+    r".*amazon\.com|"
+    r".*deezer\.com|"
+    r".*music\.apple\.com|"
+    r".*pandora.*\.com|"
+    r"soundcloud\.com|"
+    r".*spotify\.com|"
+    r".*tidal\.com|"
+    r".*music\.yandex\..{1,3}|"
+    r".*youtu(?:\.be|be\.com))"
 )
 
 SOURCE_IDENTIFIER_TO_NAME = {
