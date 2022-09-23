@@ -11,7 +11,7 @@ pub mod config_consts {
     pub const YAML_FILE_PATH: &str = "config.yaml";
     pub const JSON_FILE_PATH: &str = "config.json";
 
-    pub const ENV_PREFIX: &str = "CONFIG:";
+    pub const ENV_PREFIX: &str = "CONFIG.";
 }
 
 pub mod cluster_consts {

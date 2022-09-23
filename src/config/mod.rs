@@ -30,7 +30,7 @@ impl Config {
         Figment::new()
             .merge(Yaml::file(config_consts::YAML_FILE_PATH))
             .merge(Json::file(config_consts::JSON_FILE_PATH))
-            .join(Env::prefixed(config_consts::ENV_PREFIX).split(":"))
+            .join(Env::prefixed(config_consts::ENV_PREFIX).split("."))
             .extract()
     }
 }
