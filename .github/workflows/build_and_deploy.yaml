@@ -10,7 +10,7 @@ jobs:
     name: Get Version
     runs-on: ubuntu-latest
     outputs:
-      version: ${{ steps.version.outputs.version }}
+      version: ${{ steps.version.outputs.value }}
     steps:
       - name: Checkout Code
         uses: actions/checkout@v2
@@ -20,28 +20,10 @@ jobs:
 
       - name: Git Version
         id: version
-        uses: codacy/git-version@2.5.3
+        uses: SebRollen/toml-action@v1.0.0
         with:
-          dev-branch: develop
-          minor-identifier: "/feat(?:ure)?:/"
-          major-identifier: "/(?:BREAKING CHANGE:)|(?:^[a-z]+!:)/"
-
-  sentry:
-    name: Create Sentry Release
-    needs: getversion
-    runs-on: ubuntu-latest
-    steps:
-      - name: Checkout Code
-        uses: actions/checkout@v2
-      - name: Push the Release to Sentry
-        uses: getsentry/action-release@v1
-        env:
-          SENTRY_AUTH_TOKEN: ${{ secrets.SENTRY_AUTH_TOKEN }}
-          SENTRY_ORG: bored-corp
-          SENTRY_PROJECT: share-music
-        with:
-          environment: production
-          version: share-music@${{ needs.getversion.outputs.version }}
+          file: 'Cargo.toml'
+          field: 'package.version'
 
   settag:
     name: Create Git Tag from Version

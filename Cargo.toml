@@ -1,0 +1,27 @@
+[package]
+name = "share-music"
+version = "3.0.0"
+edition = "2021"
+publish = false
+
+[dependencies]
+figment = { version = "0.10", features = [ "env", "json", "yaml" ] }
+futures-util = { default-features = false, version = "0.3" }
+hyper = { version = "0.14", features = [ "server" ] }
+hyper-rustls = "0.23"
+image = "0.24"
+lazy-regex = "2.3"
+parking_lot = "0.12"
+prometheus = "0.13"
+regex = "1.6"
+serde = { version = "1.0", features = ["derive"] }
+serde_json = "1.0"
+tokio = { version = "1.17", features = [ "full" ] }
+tracing = "0.1"
+tracing-subscriber = { version = "0.3", features = [ "json", "parking_lot", "registry", "env-filter" ] }
+twilight-gateway = "0.13"
+twilight-http = "0.13"
+twilight-http-ratelimiting = "0.13"
+twilight-model = "0.13"
+twilight-util = { version = "0.13", features = [ "builder", "permission-calculator" ] }
+twilight-cache-inmemory = { version = "0.13", features = [ "permission-calculator" ] }

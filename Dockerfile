@@ -1,24 +1,31 @@
-FROM --platform=linux/amd64 python:3.9-slim
+FROM rust:latest as build
 
-# Set pip to have no saved cache
-ENV PIP_NO_CACHE_DIR=false \
-    POETRY_VIRTUALENVS_CREATE=false
+# create a new empty shell project
+RUN USER=root cargo new --bin share-music
+WORKDIR /share-music
 
-# Install poetry
-RUN pip install -U poetry
+# copy over your manifests
+COPY ./Cargo.lock ./Cargo.lock
+COPY ./Cargo.toml ./Cargo.toml
 
-# Create the working directory
-WORKDIR /bot
+# this build step will cache your dependencies
+RUN cargo build --release & rm src/*.rs
 
-# Install project dependencies
-COPY pyproject.toml poetry.lock ./
-RUN poetry install --no-dev
+# copy your source tree
+COPY ./src ./src
 
-# Set version environment variable for Sentry
-ENV VERSION=$version
+# build for release
+RUN rm -f target/release/deps/share-music*
+RUN cargo build --release
 
-# Copy the source code in last to optimize rebuilding the image
-COPY . .
+FROM gcr.io/distroless/java17 as libz-required
 
-ENTRYPOINT ["python3"]
-CMD ["-m", "bot"]
+# our final base
+FROM gcr.io/distroless/cc
+
+# copy the build artifact from the build stage
+COPY --from=libz-required --chown=root:root /lib/x86_64-linux-gnu/libz.so.1 /lib/x86_64-linux-gnu/libz.so.1
+COPY --from=build /share-music/target/release/share-music /
+
+# set the startup command to run your binary
+CMD ["./share-music"]
