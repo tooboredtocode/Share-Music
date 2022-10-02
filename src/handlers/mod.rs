@@ -8,9 +8,7 @@ use tracing::trace;
 use twilight_model::gateway::event::Event;
 
 use crate::context::Ctx;
-use crate::handlers::metrics::update_cluster_metrics;
 
-mod metrics;
 mod interactions;
 
 pub fn handle(shard_id: u64, event: Event, context: Ctx) {
@@ -21,9 +19,7 @@ pub fn handle(shard_id: u64, event: Event, context: Ctx) {
 async fn inner_handle(shard_id: u64, event: Event, context: Ctx) {
     trace!("Shard: {}, Event: {:?}", shard_id, event.kind());
 
-    context.cache.update(&event);
-
-    update_cluster_metrics(shard_id, &event, &context);
+    context.metrics.update_cluster_metrics(shard_id, &event, &context);
 
     match event {
         Event::InteractionCreate(event) => interactions::handle((*event).0, context).await,

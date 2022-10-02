@@ -9,7 +9,6 @@ use hyper::Client;
 use hyper::client::HttpConnector;
 use hyper_rustls::HttpsConnector;
 use tracing::info;
-use twilight_cache_inmemory::InMemoryCache;
 use twilight_gateway::Cluster;
 use twilight_http::Client as TwilightClient;
 use twilight_model::id::Id;
@@ -26,7 +25,6 @@ mod discord_cluster;
 pub mod state;
 pub mod metrics;
 mod http_client;
-mod discord_cache;
 
 #[derive(Debug)]
 pub struct Context {
@@ -35,8 +33,6 @@ pub struct Context {
     bot_id: Id<ApplicationMarker>,
 
     pub http_client: Client<HttpsConnector<HttpConnector>>,
-
-    pub cache: InMemoryCache,
 
     pub cfg: SavedConfig,
 
@@ -60,7 +56,6 @@ impl Context {
 
         let (discord_client, bot_id) = Self::discord_client_from_config(&config).await?;
         let (discord_cluster, events) = Self::cluster_from_config(&config).await?;
-        let cache = Self::create_discord_cache();
 
         let http_client = Self::create_http_client();
 
@@ -71,7 +66,6 @@ impl Context {
             discord_cluster,
             bot_id,
             http_client,
-            cache,
             cfg: SavedConfig {
                 debug_server: config.discord.debug_server.clone(),
                 colour: config.colour

@@ -12,11 +12,16 @@ use hyper::{Body, Response, Server};
 use hyper::service::{make_service_fn, service_fn};
 use prometheus::{Encoder, HistogramOpts, HistogramVec, IntCounterVec, IntGaugeVec, Opts, Registry, TextEncoder};
 use tracing::info;
+use twilight_model::gateway::event::Event;
 
 use crate::{Config, Context, TerminationFuture};
 use crate::constants::NAME;
+use crate::context::Ctx;
+use crate::context::metrics::guild_store::GuildStore;
 use crate::context::state::ClusterState;
 use crate::util::error::Expectable;
+
+mod guild_store;
 
 #[derive(Debug)]
 pub struct Metrics {
@@ -25,6 +30,7 @@ pub struct Metrics {
     pub gateway_events: IntCounterVec,
 
     pub connected_guilds: IntGaugeVec,
+    guild_store: GuildStore,
 
     pub shard_states: IntGaugeVec,
     pub cluster_state: IntGaugeVec,
@@ -56,6 +62,7 @@ impl Metrics {
             &["shard", "state"],
         ).unwrap();
         registry.register(Box::new(connected_guilds.clone())).unwrap();
+        let guild_store = GuildStore::new();
 
         let shard_states = IntGaugeVec::new(
             Opts::new(prefixed!("shard_states"), "States of the shards"),
@@ -84,9 +91,39 @@ impl Metrics {
             registry,
             gateway_events,
             connected_guilds,
+            guild_store,
             shard_states,
             cluster_state,
             third_party_api
+        }
+    }
+
+    pub fn update_cluster_metrics(&self, shard_id: u64, event: &Event, ctx: &Ctx) {
+        if let Some(name) = event.kind().name() {
+            self.gateway_events
+                .get_metric_with_label_values(&[&shard_id.to_string(), name])
+                .unwrap()
+                .inc();
+        }
+
+        self.guild_store.register(shard_id, event, ctx);
+
+        match event {
+            Event::ShardConnected(_)
+            | Event::ShardConnecting(_)
+            | Event::ShardDisconnected(_)
+            | Event::ShardIdentifying(_)
+            | Event::ShardReconnecting(_)
+            | Event::ShardResuming(_) => {},
+            _ => return
+        }
+
+        self.shard_states.reset();
+        for (shard_id, info) in ctx.discord_cluster.info() {
+            self.shard_states
+                .get_metric_with_label_values(&[&shard_id.to_string(), &info.stage().to_string()])
+                .unwrap()
+                .inc();
         }
     }
 }

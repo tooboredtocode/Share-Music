@@ -15,7 +15,6 @@ pub mod config_consts {
 }
 
 pub mod cluster_consts {
-    use twilight_cache_inmemory::ResourceType;
     use twilight_model::gateway::Intents;
     use twilight_model::gateway::payload::outgoing::update_presence::UpdatePresencePayload;
     use twilight_model::gateway::presence::{ActivityType, MinimalActivity, Status};
@@ -34,8 +33,6 @@ pub mod cluster_consts {
             status: Status::Online
         }
     }
-
-    pub const CACHED_TYPES: ResourceType = ResourceType::GUILD;
 }
 
 pub mod state_consts {

@@ -24,4 +24,3 @@ twilight-http = "0.13"
 twilight-http-ratelimiting = "0.13"
 twilight-model = "0.13"
 twilight-util = { version = "0.13", features = [ "builder", "permission-calculator" ] }
-twilight-cache-inmemory = { version = "0.13", features = [ "permission-calculator" ] }
