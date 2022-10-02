@@ -66,14 +66,20 @@ impl OdesliResponse {
 
     pub fn get_data(&self) -> EntityData {
         let mut curr_max = APIProvider::min_prio();
+        let max = self.entities_by_unique_id
+            .iter()
+            .map(|(id, e)| e.api_provider.prio(&self.entity_unique_id == id))
+            .min()
+            .unwrap_or(APIProvider::max_prio());
+
         let mut res = EntityData {
             title: None,
             artist_name: None,
             thumbnail_url: None
         };
 
-        for entity in self.entities_by_unique_id.values() {
-            let prio = entity.api_provider.prio(entity.id == self.entity_unique_id);
+        for (entity_id, entity) in &self.entities_by_unique_id {
+            let prio = entity.api_provider.prio(&self.entity_unique_id == entity_id);
 
             if prio < curr_max {
                 let Entity {
@@ -94,7 +100,7 @@ impl OdesliResponse {
                 }
 
                 curr_max = prio;
-                if curr_max == APIProvider::max_prio() {
+                if curr_max == max {
                     break;
                 }
             }
@@ -261,13 +267,8 @@ impl APIProvider {
             APIProvider::Amazon => 3,
             APIProvider::Deezer => 4,
             APIProvider::Google => 5,
-            _ => {
-                if is_orig_provider {
-                    Self::min_prio() - 1
-                } else {
-                    Self::min_prio()
-                }
-            }
+            _ if is_orig_provider => Self::min_prio() - 1,
+            _ => Self::min_prio()
         }
     }
 }
