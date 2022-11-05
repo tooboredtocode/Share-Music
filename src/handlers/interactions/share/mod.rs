@@ -74,8 +74,8 @@ async fn handle_inner(inter: &Interaction, data: &CommandData, context: Ctx) -> 
 }
 
 async fn validate_url(options: &ShareCommandData, inter: &Interaction, context: &Ctx) -> EmptyResult<()> {
-    let regex: &Regex = regex!(
-        r#"https://(?:.*amazon\.com|.*deezer\.com|.*music\.apple\.com|.*pandora.*\.com|soundcloud\.com|.*spotify\.com|.*tidal\.com|.*music\.yandex\..{1,3}|.*youtu(?:\.be|be\.com))"#
+	    let regex: &Regex = regex!(
+        r#"https://(?:.*amazon\.com|.*deezer\.com|.*deezer\.page\.link|.*music\.apple\.com|.*pandora.*\.com|soundcloud\.com|.*spotify\.com|.*tidal\.com|.*music\.yandex\..{1,3}|.*youtu(?:\.be|be\.com))"#
     );
 
     if !regex.is_match(options.url.as_str()) {
