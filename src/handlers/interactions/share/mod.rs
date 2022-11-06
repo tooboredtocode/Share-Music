@@ -3,7 +3,7 @@
  *  All Rights Reserved
  */
 
-use lazy_regex::regex;
+use lazy_regex::{Lazy, lazy_regex};
 use regex::Regex;
 use tracing::{debug, instrument};
 use twilight_model::application::interaction::application_command::CommandData;
@@ -73,12 +73,27 @@ async fn handle_inner(inter: &Interaction, data: &CommandData, context: Ctx) -> 
     Ok(())
 }
 
-async fn validate_url(options: &ShareCommandData, inter: &Interaction, context: &Ctx) -> EmptyResult<()> {
-    let regex: &Regex = regex!(
-        r#"https://(?:.*amazon\.com|.*deezer\.com|.*music\.apple\.com|.*pandora.*\.com|soundcloud\.com|.*spotify\.com|.*tidal\.com|.*music\.yandex\..{1,3}|.*youtu(?:\.be|be\.com))"#
-    );
+// language=RegExp
+pub static VALID_LINKS_REGEX: Lazy<Regex> = lazy_regex!(r#"(?x)
+    (?:http|https)://
+    .* # match all potential subdomains cause shit sucks
+    (?:
+        music\.amazon\.com| # Amazon
+        deezer\.(?:page\.link|com)| # Deezer
+        music\.apple\.com| # Apple Music & iTunes
+        pandora\.com| # Pandora Music
+        soundcloud\.com| # Soundcloud
+        spotify\.com| # Spotify
+        tidal\.com| # Tidal
+        music\.yandex\.com| # Yandex
+        youtu(?:\.be|be\.com)| # YouTube (Music)
+        play\.google\.com # Google Store
+    )
+    \S
+"#);
 
-    if !regex.is_match(options.url.as_str()) {
+async fn validate_url(options: &ShareCommandData, inter: &Interaction, context: &Ctx) -> EmptyResult<()> {
+    if !VALID_LINKS_REGEX.is_match(options.url.as_str()) {
         debug!("URL is not valid, informing user");
 
         context.interaction_client()
