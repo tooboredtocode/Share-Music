@@ -3,7 +3,9 @@
  *  All Rights Reserved
  */
 
-use tracing::{info, warn};
+use tracing::info;
+#[cfg(debug_assertions)]
+use tracing::warn;
 use twilight_model::id::Id;
 
 use crate::context::Ctx;
