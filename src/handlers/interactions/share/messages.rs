@@ -9,13 +9,13 @@ use crate::util::discord_locales::DiscordLocale;
 pub const fn invalid_url(locale: DiscordLocale) -> &'static str {
     match locale {
         DiscordLocale::GERMAN => {
-            "Bitte sende mir eine valide URL, \
-            ich kann nur mit URLs von den folgenden Platformen arbeiten:\n\
+            "Bitte sende mir einen validen Link, \
+            ich kann nur mit Links von den folgenden Plattformen arbeiten:\n\
             Spotify, iTunes, Apple Music, YouTube, YouTube Music, Pandora, Deezer, Tidal, \
             Amazon Music, SoundCloud and Yandex"
         }
         _ => {
-            "Please send a valid URL, I can only work with links from the following platforms:\n\
+            "Please send a valid link, I can only work with links from the following platforms:\n\
             Spotify, iTunes, Apple Music, YouTube, YouTube Music, Pandora, Deezer, Tidal, \
             Amazon Music, SoundCloud and Yandex"
         }

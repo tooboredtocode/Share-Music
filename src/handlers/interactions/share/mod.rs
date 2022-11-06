@@ -21,6 +21,7 @@ use crate::util::odesli::{EntityData, OdesliResponse};
 use crate::TerminationFuture;
 use crate::util::colour::{get_dominant_colour, RGBPixel};
 use crate::util::{EmptyResult, odesli};
+use crate::util::discord_locales::DiscordLocale;
 use crate::util::error::Expectable;
 use crate::util::interaction::{defer, get_options};
 
@@ -79,7 +80,8 @@ pub static VALID_LINKS_REGEX: Lazy<Regex> = lazy_regex!(r#"(?x)
     .* # match all potential subdomains cause shit sucks
     (?:
         music\.amazon\.com| # Amazon
-        deezer\.(?:page\.link|com)| # Deezer
+        deezer\.com| # Deezer
+        # deezer\.(?:page\.link|com)| # Deezer doesn't seem to like page.link links
         music\.apple\.com| # Apple Music & iTunes
         pandora\.com| # Pandora Music
         soundcloud\.com| # Soundcloud
@@ -103,7 +105,26 @@ async fn validate_url(options: &ShareCommandData, inter: &Interaction, context: 
                 &InteractionResponse {
                     kind: InteractionResponseType::ChannelMessageWithSource,
                     data: InteractionResponseDataBuilder::new()
-                        .content(messages::invalid_url((&inter.locale).into()))
+                        .content({
+                            let locale = DiscordLocale::from(&inter.locale);
+
+                            if options.url.contains("deezer.page.link") {
+                                match locale {
+                                    DiscordLocale::GERMAN => {
+                                        "Die API die wir verwenden akzeptiert momentan keine \
+                                        deezer.page.link Links, versuch es bitte nochmal mit einem \
+                                        deezer.com Link"
+                                    }
+                                    _ => {
+                                        "The API we use currently doesn't accept \
+                                        deezer.page.link links, please try it again with a \
+                                        deezer.com link"
+                                    }
+                                }
+                            } else {
+                                messages::invalid_url(locale)
+                            }
+                        })
                         .flags(MessageFlags::EPHEMERAL)
                         .build()
                         .into()
