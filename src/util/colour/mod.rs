@@ -4,21 +4,20 @@
  */
 
 use std::time::Instant;
-use hyper::Body;
-use image::imageops::FilterType;
 
+use hyper::Body;
 use image::DynamicImage;
+use image::imageops::FilterType;
 use tracing::debug;
 
-use crate::constants::colour_consts;
+use hsl_pixel::HSLPixel;
+use pixel_group::PixelGroup;
+pub use rgb_pixel::RGBPixel;
 
+use crate::constants::colour_consts;
 use crate::context::Ctx;
 use crate::util::error::Expectable;
 use crate::util::parser;
-
-pub use rgb_pixel::RGBPixel;
-use hsl_pixel::HSLPixel;
-use pixel_group::PixelGroup;
 
 mod rgb_pixel;
 mod hsl_pixel;

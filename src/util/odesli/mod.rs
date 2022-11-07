@@ -3,16 +3,16 @@
  *  All Rights Reserved
  */
 
-use hyper::{Body, Method};
 use std::fmt::{Display, Formatter};
 use std::time::Instant;
 
-use crate::commands::share::ShareCommandData;
-use crate::context::Ctx;
-use crate::util::parser;
+use hyper::{Body, Method};
 
 pub use api_type::*;
 pub use error::ApiErr;
+
+use crate::context::Ctx;
+use crate::util::parser;
 
 mod api_type;
 mod error;
@@ -63,8 +63,8 @@ impl Display for OdesliEndpoints {
     }
 }
 
-pub async fn fetch_from_api(options: &ShareCommandData, context: &Ctx) -> Result<OdesliResponse, ApiErr> {
-    let req_data = OdesliEndpoints::links(&options.url);
+pub async fn fetch_from_api(url: &String, context: &Ctx) -> Result<OdesliResponse, ApiErr> {
+    let req_data = OdesliEndpoints::links(url);
 
     let req = hyper::Request::builder()
         .method(req_data.method())

@@ -13,6 +13,7 @@ use crate::ShareResult;
 use crate::util::error::Expectable;
 
 pub mod test_colour_consts;
+pub mod find_links;
 pub mod share;
 pub mod error;
 
@@ -36,7 +37,8 @@ async fn sync(ctx: &Ctx) -> ShareResult<()> {
                 Id::new(*debug_server),
                 &[
                     share::command(),
-                    test_colour_consts::command()
+                    find_links::command(),
+                    test_colour_consts::command(),
                 ]
             )
             .exec()
@@ -51,7 +53,8 @@ async fn sync(ctx: &Ctx) -> ShareResult<()> {
 async fn sync(ctx: &Ctx) -> ShareResult<()> {
     ctx.interaction_client()
         .set_global_commands(&[
-            share::command()
+            share::command(),
+            find_links::command()
         ])
         .exec()
         .await

@@ -6,7 +6,10 @@
 use tracing::warn;
 use twilight_model::application::interaction::application_command::CommandData;
 use twilight_model::application::interaction::Interaction;
+use twilight_model::channel::Message;
+use twilight_model::channel::message::MessageFlags;
 use twilight_model::http::interaction::{InteractionResponse, InteractionResponseType};
+use twilight_util::builder::InteractionResponseDataBuilder;
 
 use crate::commands::sync_commands;
 use crate::context::Ctx;
@@ -34,6 +37,26 @@ where
     Ok(res)
 }
 
+pub fn get_message(data: &CommandData) -> EmptyResult<&Message> {
+    let resolved = match &data.resolved {
+        None => {
+            warn!("Received Message Application Command Interaction without resolved data");
+            return Err(())
+        }
+        Some(r) => r
+    };
+
+    match resolved.messages.iter().next() {
+        None => {
+            warn!("Received Message Application Command Interaction without message");
+            Err(())
+        }
+        Some((_, msg)) => {
+            Ok(msg)
+        }
+    }
+}
+
 pub async fn defer(inter: &Interaction, context: &Ctx) -> EmptyResult<()> {
     if let Err(_) = context.interaction_client()
         .create_response(
@@ -52,4 +75,23 @@ pub async fn defer(inter: &Interaction, context: &Ctx) -> EmptyResult<()> {
     }
 
     Ok(())
+}
+
+pub async fn respond_with(inter: &Interaction, context: &Ctx, msg: &str) {
+    context.interaction_client()
+        .create_response(
+            inter.id,
+            inter.token.as_str(),
+            &InteractionResponse {
+                kind: InteractionResponseType::ChannelMessageWithSource,
+                data: InteractionResponseDataBuilder::new()
+                    .content(msg)
+                    .flags(MessageFlags::EPHEMERAL)
+                    .build()
+                    .into()
+            }
+        )
+        .exec()
+        .await
+        .warn_with("Failed to respond to the Interaction");
 }

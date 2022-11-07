@@ -3,13 +3,15 @@
  *  All Rights Reserved
  */
 
-use std::collections::{HashMap};
+use std::collections::HashMap;
 use std::ops::Deref;
 use std::time::Duration;
+
 use parking_lot::RwLock;
 use tracing::debug;
 use twilight_model::gateway::event::Event;
 use twilight_model::gateway::payload::incoming::{GuildCreate, GuildDelete, Ready};
+
 use crate::context::Ctx;
 
 #[derive(Eq, PartialEq, Debug)]

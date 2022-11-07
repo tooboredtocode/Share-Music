@@ -6,13 +6,21 @@
 use std::ops::Deref;
 
 use tracing::{debug, instrument, warn};
+use twilight_model::application::command::CommandType;
 use twilight_model::application::interaction::{Interaction, InteractionData, InteractionType};
 
-use crate::commands;
+use crate::commands::{
+    find_links::COMMAND_NAME as FIND_COMMAND_NAME,
+    share::COMMAND_NAME as SHARE_COMMAND_NAME,
+    test_colour_consts::COMMAND_NAME as TEST_COMMAND_NAME
+};
 use crate::context::Ctx;
 
 mod share;
+mod find_links;
 mod test_colour_consts;
+mod common;
+mod messages;
 
 #[instrument(
     name = "interaction_handler",
@@ -48,10 +56,17 @@ async fn handle_application_commands(inter: Interaction, context: Ctx) {
         InteractionData::ApplicationCommand(data) => {
             let data = data.deref();
 
-            match data.name.as_str() {
-                commands::share::COMMAND_NAME => share::handle(&inter, data, context).await,
-                commands::test_colour_consts::COMMAND_NAME => test_colour_consts::handle(&inter, data, context).await,
-                _ => {}
+            match (data.kind, data.name.as_str()) {
+                (CommandType::ChatInput, SHARE_COMMAND_NAME) =>
+                    share::handle(&inter, data, context).await,
+                (CommandType::ChatInput, TEST_COMMAND_NAME) =>
+                    test_colour_consts::handle(&inter, data, context).await,
+                (CommandType::Message, FIND_COMMAND_NAME) =>
+                    find_links::handle(&inter, data, context).await,
+                (kind, name) => debug!(
+                    "Unknown {} Application Command Interaction: {}",
+                    kind.kind(), name
+                )
             }
         }
         _ => {}

@@ -5,6 +5,7 @@
 
 use std::error::Error;
 use std::fmt::{Display, Formatter};
+
 use hyper::http;
 
 use crate::util::error::BlanketImpl;

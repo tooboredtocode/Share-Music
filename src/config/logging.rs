@@ -4,6 +4,7 @@
  */
 
 use std::collections::HashMap;
+
 use serde::Deserialize;
 use tracing_subscriber::filter::LevelFilter;
 
@@ -32,17 +33,17 @@ impl Default for Format {
 
 #[derive(Copy, Clone, Debug, Deserialize)]
 pub enum Level {
-    #[serde(alias="trace", alias="TRACE")]
+    #[serde(alias = "trace", alias = "TRACE")]
     Trace,
-    #[serde(alias="debug", alias="DEBUG")]
+    #[serde(alias = "debug", alias = "DEBUG")]
     Debug,
-    #[serde(alias="info", alias="INFO")]
+    #[serde(alias = "info", alias = "INFO")]
     Info,
-    #[serde(alias="warn", alias="WARN")]
+    #[serde(alias = "warn", alias = "WARN")]
     Warn,
-    #[serde(alias="error", alias="ERROR")]
+    #[serde(alias = "error", alias = "ERROR")]
     Error,
-    #[serde(alias="off", alias="OFF")]
+    #[serde(alias = "off", alias = "OFF")]
     Off
 }
 

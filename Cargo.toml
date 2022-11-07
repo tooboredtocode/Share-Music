@@ -10,6 +10,7 @@ futures-util = { default-features = false, version = "0.3" }
 hyper = { version = "0.14", features = [ "server" ] }
 hyper-rustls = "0.23"
 image = "0.24"
+itertools = "0.10"
 lazy-regex = "2.3"
 parking_lot = "0.12"
 prometheus = "0.13"

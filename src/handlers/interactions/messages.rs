@@ -23,6 +23,18 @@ pub const fn invalid_url(locale: DiscordLocale) -> &'static str {
 }
 
 #[inline]
+pub const fn no_links_found(locale: DiscordLocale) -> &'static str {
+    match locale {
+        DiscordLocale::GERMAN => {
+            "Es konnten keine uns bekannten links in der Nachricht gefunden werden"
+        }
+        _ => {
+            "Couldn't find any links in the message"
+        }
+    }
+}
+
+#[inline]
 pub const fn error(locale: DiscordLocale) -> &'static str {
     match locale {
         DiscordLocale::GERMAN => {
