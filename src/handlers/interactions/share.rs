@@ -71,32 +71,7 @@ async fn handle_inner(inter: &Interaction, data: &CommandData, context: Ctx) -> 
 pub async fn validate_url(options: &ShareCommandData, inter: &Interaction, context: &Ctx) -> EmptyResult<()> {
     if !VALID_LINKS_REGEX.is_match(options.url.as_str()) {
         debug!("URL is not valid, informing user");
-
-        respond_with(
-            inter,
-            context,
-            {
-                let locale = DiscordLocale::from(&inter.locale);
-
-                if options.url.contains("deezer.page.link") {
-                    match locale {
-                        DiscordLocale::GERMAN => {
-                            "Die API die wir verwenden akzeptiert momentan keine \
-                            deezer.page.link Links, versuch es bitte nochmal mit einem \
-                            deezer.com Link"
-                        }
-                        _ => {
-                            "The API we use currently doesn't accept \
-                            deezer.page.link links, please try it again with a \
-                            deezer.com link"
-                        }
-                    }
-                } else {
-                    messages::invalid_url(locale)
-                }
-            }
-        ).await;
-
+        respond_with(inter, context, messages::invalid_url((&inter.locale).into())).await;
         Err(())
     } else {
         Ok(())

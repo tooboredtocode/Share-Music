@@ -24,8 +24,7 @@ pub static VALID_LINKS_REGEX: Lazy<Regex> = lazy_regex!(r#"(?x)
     .* # match all potential subdomains cause shit sucks
     (?:
         music\.amazon\.com| # Amazon
-        deezer\.com| # Deezer
-        # deezer\.(?:page\.link|com)| # Deezer doesn't seem to like page.link links
+        deezer\.(?:page\.link|com)| # Deezer
         music\.apple\.com| # Apple Music & iTunes
         pandora\.com| # Pandora Music
         soundcloud\.com| # Soundcloud
