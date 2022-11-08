@@ -3,21 +3,18 @@
  *  All Rights Reserved
  */
 
-use futures_util::future::join_all;
+use futures_util::future::{try_join_all};
 use itertools::Itertools;
-use tracing::{debug, instrument};
+use tracing::{debug, instrument, Instrument, Level, span};
 use twilight_model::application::interaction::application_command::CommandData;
 use twilight_model::application::interaction::Interaction;
 
 use crate::context::Ctx;
-use crate::handlers::interactions::common;
-use crate::handlers::interactions::common::{map_odesli_response, VALID_LINKS_REGEX};
+use crate::handlers::interactions::common::{embed_routine, VALID_LINKS_REGEX};
 use crate::handlers::interactions::messages::no_links_found;
-use crate::util::colour::get_dominant_colour;
 use crate::util::EmptyResult;
 use crate::util::error::Expectable;
 use crate::util::interaction::{defer, get_message, respond_with};
-use crate::util::odesli::fetch_from_api;
 
 pub async fn handle(inter: &Interaction, data: &CommandData, context: Ctx) {
     // use an inner function to make splitting the code easier
@@ -54,32 +51,16 @@ async fn handle_inner(inter: &Interaction, data: &CommandData, context: Ctx) -> 
     );
     defer(inter, &context).await?;
 
-    let response = join_all(
-        links.iter()
-            .map(|link| fetch_from_api(link, &context))
-    ).await;
-
-    let mut data = Vec::with_capacity(response.len());
-    for resp in response {
-        data.push(map_odesli_response(resp, &context, inter).await?);
-    }
-
-    let embeds = join_all(
-        data.iter()
-            .map(|d| async {
-                let entity_data = d.get_data();
-
-                let colour = match &entity_data.thumbnail_url {
-                    Some(url) => {
-                        debug!("Album/Song has a Thumbnail, getting dominant colour");
-                        get_dominant_colour(url, &context, Default::default()).await
-                    },
-                    None => None
-                };
-
-                common::build_embed(d, entity_data, colour).build()
-            })
-    ).await;
+    debug!("Starting Routine for each link");
+    let embeds = try_join_all(
+        links.iter().map(|link|
+            embed_routine(link, &context, inter)
+                .instrument(span!(Level::DEBUG, "embed_routine", link = link))
+        )
+    ).await?
+        .into_iter()
+        .map(|e| e.build())
+        .collect_vec();
 
     let r = context.interaction_client()
         .create_followup(inter.token.as_str())
@@ -95,4 +76,3 @@ async fn handle_inner(inter: &Interaction, data: &CommandData, context: Ctx) -> 
 
     Ok(())
 }
-

@@ -10,10 +10,8 @@ use twilight_model::application::interaction::Interaction;
 use crate::commands::share::ShareCommandData;
 use crate::context::Ctx;
 use crate::handlers::interactions::{common, messages};
-use crate::handlers::interactions::common::{map_odesli_response, VALID_LINKS_REGEX};
-use crate::util::{EmptyResult, odesli};
-use crate::util::colour::get_dominant_colour;
-use crate::util::discord_locales::DiscordLocale;
+use crate::handlers::interactions::common::VALID_LINKS_REGEX;
+use crate::util::EmptyResult;
 use crate::util::error::Expectable;
 use crate::util::interaction::{defer, get_options, respond_with};
 
@@ -36,22 +34,11 @@ async fn handle_inner(inter: &Interaction, data: &CommandData, context: Ctx) -> 
     debug!("User passed valid arguments, deferring Response");
     defer(inter, &context).await?;
 
-    let data = map_odesli_response(
-        odesli::fetch_from_api(&options.url, &context).await,
+    let embed = common::embed_routine(
+        &options.url,
         &context,
         inter
     ).await?;
-
-    let entity_data = data.get_data();
-    let colour = match &entity_data.thumbnail_url {
-        Some(url) => {
-            debug!("Album/Song has a Thumbnail, getting dominant colour");
-            get_dominant_colour(url, &context, Default::default()).await
-        },
-        None => None
-    };
-
-    let embed = common::build_embed(&data, entity_data, colour);
 
     let r = context.interaction_client()
         .create_followup(inter.token.as_str())
