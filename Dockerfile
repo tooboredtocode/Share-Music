@@ -13,9 +13,9 @@ RUN cargo build --release & rm src/*.rs
 
 # copy your source tree
 COPY ./src ./src
+COPY ./build.rs ./build.rs
 
 # build for release
-RUN rm -f target/release/deps/share-music*
 RUN cargo build --release
 
 FROM gcr.io/distroless/java17 as libz-required
