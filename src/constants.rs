@@ -5,7 +5,11 @@
 
 pub const NAME: &str = "ShareMusic";
 pub const NAME_SHORT: &str = "Sharing";
+
 pub const VERSION: &str = env!("CARGO_PKG_VERSION");
+pub const RUST_VERSION: &str = env!("BUILD_RUSTC_VERSION");
+pub const GIT_BRANCH: &str = env!("BUILD_GIT_BRANCH");
+pub const GIT_REVISION: &str = env!("BUILD_GIT_REVISION");
 
 pub mod config_consts {
     pub const YAML_FILE_PATH: &str = "config.yaml";

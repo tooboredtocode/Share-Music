@@ -3,6 +3,7 @@ name = "share-music"
 version = "3.1.0"
 edition = "2021"
 publish = false
+build = "build.rs"
 
 [dependencies]
 figment = { version = "0.10", features = [ "env", "json", "yaml" ] }

@@ -15,7 +15,7 @@ use tracing::info;
 use twilight_model::gateway::event::Event;
 
 use crate::{Config, Context, TerminationFuture};
-use crate::constants::NAME;
+use crate::constants::{NAME, VERSION, RUST_VERSION, GIT_BRANCH, GIT_REVISION};
 use crate::context::Ctx;
 use crate::context::metrics::guild_store::GuildStore;
 use crate::context::state::ClusterState;
@@ -50,6 +50,15 @@ impl Metrics {
         labels.insert("cluster".to_string(), cluster_id.to_string());
         labels.insert("bot".to_string(), NAME.to_string());
         let registry = Registry::new_custom(None, Some(labels)).unwrap();
+
+        let version = IntGaugeVec::new(
+            Opts::new(prefixed!("bot_info"), "Information about the bot"),
+            &["branch", "revision", "rustc_version", "version"],
+        ).unwrap();
+        registry.register(Box::new(version.clone())).unwrap();
+        version.get_metric_with_label_values(&[GIT_BRANCH, GIT_REVISION, RUST_VERSION, VERSION])
+            .unwrap()
+            .set(1);
 
         let gateway_events = IntCounterVec::new(
             Opts::new(prefixed!("gateway_events"), "Received gateway events"),
