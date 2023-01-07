@@ -49,7 +49,7 @@ pub async fn map_odesli_response(
             match context.interaction_client()
                 .create_followup(inter.token.as_str())
                 .content(messages::error((&inter.locale).into()))
-                .unwrap() // this is safe as we use static strings that are below the max size
+                .expect("Somehow the static string is too long, this should never happen")
                 .await
                 .warn_with("Failed to inform user of the error")
             {

@@ -65,7 +65,7 @@ async fn handle_inner(inter: &Interaction, data: &CommandData, context: Ctx) -> 
     let r = context.interaction_client()
         .create_followup(inter.token.as_str())
         .embeds(embeds.as_slice())
-        .unwrap()
+        .expect("Somehow more than 10 embeds were created, this should never happen")
         .await
         .warn_with("Failed to send the response to the user");
 

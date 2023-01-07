@@ -102,7 +102,7 @@ impl Context {
         self.metrics
             .cluster_state
             .get_metric_with_label_values(&[new_state.name()])
-            .unwrap()
+            .expect("We passed correct arguments, so this should never fail")
             .set(1);
 
         self.state.set_state(new_state)

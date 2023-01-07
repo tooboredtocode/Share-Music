@@ -69,11 +69,11 @@ impl GuildStore {
 
         ctx.metrics.connected_guilds
             .get_metric_with_label_values(&[&shard_id.to_string(), "available"])
-            .unwrap()
+            .expect("We passed correct arguments, so this should never fail")
             .set(self.count(shard_id, Some(GuildState::Available)) as i64);
         ctx.metrics.connected_guilds
             .get_metric_with_label_values(&[&shard_id.to_string(), "unavailable"])
-            .unwrap()
+            .expect("We passed correct arguments, so this should never fail")
             .set(self.count(shard_id, Some(GuildState::Unavailable)) as i64);
     }
 

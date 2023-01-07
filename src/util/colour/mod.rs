@@ -118,7 +118,7 @@ async fn fetch_image(url: &String, context: &Ctx) -> Option<DynamicImage> {
             metrics_url.as_str(),
             resp.status().as_str()
         ])
-        .unwrap()
+        .expect("We passed correct arguments, so this should never fail")
         .observe(diff.as_secs_f64());
 
     let mut img = parser::parse_image(resp)

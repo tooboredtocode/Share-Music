@@ -81,7 +81,7 @@ pub async fn fetch_from_api(url: &String, context: &Ctx) -> Result<OdesliRespons
             req_data.metrics_uri().as_str(),
             resp.status().as_str()
         ])
-        .unwrap()
+        .expect("We passed correct arguments, so this should never fail")
         .observe(diff.as_secs_f64());
 
     if resp.status() != 200 {

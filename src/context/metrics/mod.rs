@@ -49,51 +49,65 @@ impl Metrics {
         let mut labels = HashMap::new();
         labels.insert("cluster".to_string(), cluster_id.to_string());
         labels.insert("bot".to_string(), NAME.to_string());
-        let registry = Registry::new_custom(None, Some(labels)).unwrap();
+        let registry = Registry::new_custom(None, Some(labels))
+            .expect("We passed correct arguments, so this should never fail");
 
         let version = IntGaugeVec::new(
             Opts::new(prefixed!("bot_info"), "Information about the bot"),
             &["branch", "revision", "rustc_version", "version"],
-        ).unwrap();
-        registry.register(Box::new(version.clone())).unwrap();
+        ).expect("We passed correct arguments, so this should never fail");
+        registry
+            .register(Box::new(version.clone()))
+            .expect("We passed correct arguments, so this should never fail");
         version.get_metric_with_label_values(&[GIT_BRANCH, GIT_REVISION, RUST_VERSION, VERSION])
-            .unwrap()
+            .expect("We passed correct arguments, so this should never fail")
             .set(1);
 
         let gateway_events = IntCounterVec::new(
             Opts::new(prefixed!("gateway_events"), "Received gateway events"),
             &["shard", "event"],
-        ).unwrap();
-        registry.register(Box::new(gateway_events.clone())).unwrap();
+        ).expect("We passed correct arguments, so this should never fail");
+        registry
+            .register(Box::new(gateway_events.clone()))
+            .expect("We passed correct arguments, so this should never fail");
 
         let connected_guilds = IntGaugeVec::new(
             Opts::new(prefixed!("guilds"), "Guilds Connected to the bot"),
             &["shard", "state"],
-        ).unwrap();
-        registry.register(Box::new(connected_guilds.clone())).unwrap();
+        ).expect("We passed correct arguments, so this should never fail");
+        registry
+            .register(Box::new(connected_guilds.clone()))
+            .expect("We passed correct arguments, so this should never fail");
+
         let guild_store = GuildStore::new();
 
         let shard_states = IntGaugeVec::new(
             Opts::new(prefixed!("shard_states"), "States of the shards"),
             &["shard", "state"]
-        ).unwrap();
-        registry.register(Box::new(shard_states.clone())).unwrap();
+        ).expect("We passed correct arguments, so this should never fail");
+        registry
+            .register(Box::new(shard_states.clone()))
+            .expect("We passed correct arguments, so this should never fail");
 
         let cluster_state = IntGaugeVec::new(
             Opts::new(prefixed!("cluster_state"), "Cluster state"),
             &["state"]
-        ).unwrap();
-        registry.register(Box::new(cluster_state.clone())).unwrap();
+        ).expect("We passed correct arguments, so this should never fail");
+        registry
+            .register(Box::new(cluster_state.clone()))
+            .expect("We passed correct arguments, so this should never fail");
 
         let third_party_api = HistogramVec::new(
             HistogramOpts::new(prefixed!("3rd_party_api_request_duration_seconds"), "Response time for the various APIs used by the bots"),
             &["method", "url", "status"]
-        ).unwrap();
-        registry.register(Box::new(third_party_api.clone())).unwrap();
+        ).expect("We passed correct arguments, so this should never fail");
+        registry
+            .register(Box::new(third_party_api.clone()))
+            .expect("We passed correct arguments, so this should never fail");
 
         cluster_state
             .get_metric_with_label_values(&[ClusterState::Starting.name()])
-            .unwrap()
+            .expect("We passed correct arguments, so this should never fail")
             .set(1);
 
         Self {
@@ -111,7 +125,7 @@ impl Metrics {
         if let Some(name) = event.kind().name() {
             self.gateway_events
                 .get_metric_with_label_values(&[&shard_id.to_string(), name])
-                .unwrap()
+                .expect("We passed correct arguments, so this should never fail")
                 .inc();
         }
 
@@ -131,7 +145,7 @@ impl Metrics {
         for (shard_id, info) in ctx.discord_cluster.info() {
             self.shard_states
                 .get_metric_with_label_values(&[&shard_id.to_string(), &info.stage().to_string()])
-                .unwrap()
+                .expect("We passed correct arguments, so this should never fail")
                 .inc();
         }
     }
@@ -142,7 +156,8 @@ impl Context {
         let mut buffer = Vec::new();
         let encoder = TextEncoder::new();
         let metric_families = self.metrics.registry.gather();
-        encoder.encode(&metric_families, &mut buffer).unwrap();
+        encoder.encode(&metric_families, &mut buffer)
+            .expect("We used valid metric names, so the encoding should never fail");
 
         Ok(Response::new(Body::from(buffer)))
     }

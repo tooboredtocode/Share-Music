@@ -43,7 +43,7 @@ async fn handle_inner(inter: &Interaction, data: &CommandData, context: Ctx) -> 
     let r = context.interaction_client()
         .create_followup(inter.token.as_str())
         .embeds(&[embed.build()])
-        .unwrap()
+        .expect("Somehow we built an invalid embed, this should never happen")
         .await
         .warn_with("Failed to send the response to the user");
 
