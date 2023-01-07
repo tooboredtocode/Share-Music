@@ -67,7 +67,6 @@ pub async fn defer(inter: &Interaction, context: &Ctx) -> EmptyResult<()> {
                 data: None
             }
         )
-        .exec()
         .await
     {
         warn!("Failed to defer Response, aborting handler");
@@ -91,7 +90,6 @@ pub async fn respond_with(inter: &Interaction, context: &Ctx, msg: &str) {
                     .into()
             }
         )
-        .exec()
         .await
         .warn_with("Failed to respond to the Interaction");
 }

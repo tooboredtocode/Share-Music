@@ -26,7 +26,6 @@ impl Context {
 
         let user = client
             .current_user()
-            .exec()
             .await
             .expect_with("Failed to get current user")?
             .model()

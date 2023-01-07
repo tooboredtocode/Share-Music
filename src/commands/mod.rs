@@ -41,7 +41,6 @@ async fn sync(ctx: &Ctx) -> ShareResult<()> {
                     test_colour_consts::command(),
                 ]
             )
-            .exec()
             .await
             .expect_with("Failed to Synchronize Commands")?;
     }

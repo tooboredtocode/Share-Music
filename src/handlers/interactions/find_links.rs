@@ -66,7 +66,6 @@ async fn handle_inner(inter: &Interaction, data: &CommandData, context: Ctx) -> 
         .create_followup(inter.token.as_str())
         .embeds(embeds.as_slice())
         .unwrap()
-        .exec()
         .await
         .warn_with("Failed to send the response to the user");
 

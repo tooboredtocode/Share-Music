@@ -50,7 +50,6 @@ pub async fn map_odesli_response(
                 .create_followup(inter.token.as_str())
                 .content(messages::error((&inter.locale).into()))
                 .unwrap() // this is safe as we use static strings that are below the max size
-                .exec()
                 .await
                 .warn_with("Failed to inform user of the error")
             {
@@ -70,7 +69,6 @@ pub async fn map_odesli_response(
 
                         ctx.discord_client
                             .delete_message(msg.channel_id, msg.id)
-                            .exec()
                             .await
                             .warn_with("Failed to delete Error Message")
                     });
