@@ -3,6 +3,7 @@
  *  All Rights Reserved
  */
 
+use std::borrow::Cow;
 use std::fmt::{Display, Formatter};
 use std::time::Instant;
 
@@ -12,6 +13,7 @@ pub use api_type::*;
 pub use error::ApiErr;
 
 use crate::context::Ctx;
+use crate::context::metrics::ThirdPartyLabels;
 use crate::util::parser;
 
 mod api_type;
@@ -76,12 +78,11 @@ pub async fn fetch_from_api(url: &String, context: &Ctx) -> Result<OdesliRespons
     let diff = now.elapsed();
 
     context.metrics.third_party_api
-        .get_metric_with_label_values(&[
-            req_data.method().as_str(),
-            req_data.metrics_uri().as_str(),
-            resp.status().as_str()
-        ])
-        .expect("We passed correct arguments, so this should never fail")
+        .get_or_create(&ThirdPartyLabels {
+            method: req_data.method().into(),
+            url: Cow::from(req_data.metrics_uri()),
+            status: resp.status().into()
+        })
         .observe(diff.as_secs_f64());
 
     if resp.status() != 200 {

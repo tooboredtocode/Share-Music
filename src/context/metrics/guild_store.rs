@@ -8,13 +8,15 @@ use std::ops::Deref;
 use std::time::Duration;
 
 use parking_lot::RwLock;
+use prometheus_client::encoding::EncodeLabelValue;
 use tracing::debug;
 use twilight_model::gateway::event::Event;
 use twilight_model::gateway::payload::incoming::{GuildCreate, GuildDelete, Ready};
 
 use crate::context::Ctx;
+use crate::context::metrics::GuildLabels;
 
-#[derive(Eq, PartialEq, Debug)]
+#[derive(Copy, Clone, Debug, Hash, PartialEq, Eq, EncodeLabelValue)]
 pub enum GuildState {
     Available,
     Unavailable
@@ -26,6 +28,12 @@ impl From<bool> for GuildState {
             true => GuildState::Unavailable,
             false => GuildState::Available
         }
+    }
+}
+
+impl GuildState {
+    fn iter() -> impl Iterator<Item = GuildState> {
+        [GuildState::Available, GuildState::Unavailable].into_iter()
     }
 }
 
@@ -67,14 +75,14 @@ impl GuildStore {
             _ => return
         }
 
-        ctx.metrics.connected_guilds
-            .get_metric_with_label_values(&[&shard_id.to_string(), "available"])
-            .expect("We passed correct arguments, so this should never fail")
-            .set(self.count(shard_id, Some(GuildState::Available)) as i64);
-        ctx.metrics.connected_guilds
-            .get_metric_with_label_values(&[&shard_id.to_string(), "unavailable"])
-            .expect("We passed correct arguments, so this should never fail")
-            .set(self.count(shard_id, Some(GuildState::Unavailable)) as i64);
+        for state in GuildState::iter() {
+            ctx.metrics.connected_guilds
+                .get_or_create(&GuildLabels {
+                    shard: shard_id,
+                    state
+                })
+                .set(self.count(shard_id, Some(state)) as i64);
+        }
     }
 
     fn register_ready(&self, shard_id: u64, ready: &Ready) {

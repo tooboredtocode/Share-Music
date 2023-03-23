@@ -6,13 +6,15 @@
 use std::sync::Arc;
 
 use parking_lot::RwLock;
+use prometheus_client::encoding::EncodeLabelValue;
 use tokio::sync::broadcast::error::RecvError;
 use tracing::info;
 
 use crate::Context;
+use crate::context::metrics::ClusterLabels;
 use crate::util::{StateListener, StateUpdater};
 
-#[derive(Copy, Clone, Eq, PartialEq, Debug)]
+#[derive(Copy, Clone, Debug, Hash, PartialEq, Eq, EncodeLabelValue)]
 pub enum ClusterState {
     Starting,
     Running,
@@ -98,11 +100,11 @@ impl Context {
 
     /// Sets the state of the cluster and updates the metrics
     pub fn set_state(&self, new_state: ClusterState) {
-        self.metrics.cluster_state.reset();
-        self.metrics
-            .cluster_state
-            .get_metric_with_label_values(&[new_state.name()])
-            .expect("We passed correct arguments, so this should never fail")
+        self.metrics.cluster_state.clear();
+        self.metrics.cluster_state
+            .get_or_create(&ClusterLabels {
+                state: new_state,
+            })
             .set(1);
 
         self.state.set_state(new_state)

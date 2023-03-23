@@ -3,6 +3,7 @@
  *  All Rights Reserved
  */
 
+use std::borrow::Cow;
 use std::time::Instant;
 
 use hyper::Body;
@@ -16,6 +17,7 @@ pub use rgb_pixel::RGBPixel;
 
 use crate::constants::colour_consts;
 use crate::context::Ctx;
+use crate::context::metrics::{Method, ThirdPartyLabels};
 use crate::util::error::Expectable;
 use crate::util::parser;
 
@@ -113,12 +115,11 @@ async fn fetch_image(url: &String, context: &Ctx) -> Option<DynamicImage> {
     let diff = now.elapsed();
 
     context.metrics.third_party_api
-        .get_metric_with_label_values(&[
-            "GET",
-            metrics_url.as_str(),
-            resp.status().as_str()
-        ])
-        .expect("We passed correct arguments, so this should never fail")
+        .get_or_create(&ThirdPartyLabels {
+            method: Method::GET,
+            url: Cow::from(metrics_url),
+            status: resp.status().into()
+        })
         .observe(diff.as_secs_f64());
 
     let mut img = parser::parse_image(resp)

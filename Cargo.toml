@@ -14,7 +14,7 @@ image = "0.24"
 itertools = "0.10"
 lazy-regex = "2.3"
 parking_lot = "0.12"
-prometheus = "0.13"
+prometheus-client = "0.19"
 regex = "1.6"
 serde = { version = "1.0", features = ["derive"] }
 serde_json = "1.0"
