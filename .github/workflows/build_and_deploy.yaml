@@ -80,4 +80,4 @@ jobs:
             ghcr.io/tooboredtocode/share-music:latest
             ghcr.io/tooboredtocode/share-music:${{ needs.getversion.outputs.version }}
           build-args: |
-            version=${{ needs.getversion.outputs.version }}
+            BUILDKIT_CONTEXT_KEEP_GIT_DIR=1
