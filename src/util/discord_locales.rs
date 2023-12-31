@@ -3,6 +3,8 @@
  *  All Rights Reserved
  */
 
+use std::fmt::Display;
+
 #[non_exhaustive]
 #[allow(non_camel_case_types)]
 #[derive(Copy, Clone, Eq, PartialEq, Debug)]
@@ -75,6 +77,12 @@ impl DiscordLocale {
             Self::KOREAN => "ko",
             _ => "",
         }
+    }
+}
+
+impl Display for DiscordLocale {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        write!(f, "{}", self.to_str())
     }
 }
 

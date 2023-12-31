@@ -6,8 +6,9 @@
 use std::error::Error;
 
 use hyper::http;
+use tokio::task::JoinError;
 use tracing::{error, warn};
-use twilight_gateway::cluster::ClusterStartError;
+use twilight_gateway::stream::StartRecommendedError;
 use twilight_http::Error as TwilightHttpErr;
 use twilight_http::response::DeserializeBodyError;
 
@@ -39,7 +40,7 @@ impl BlanketImpl for TwilightHttpErr {}
 
 impl BlanketImpl for DeserializeBodyError {}
 
-impl BlanketImpl for ClusterStartError {}
+impl BlanketImpl for StartRecommendedError {}
 
 impl BlanketImpl for hyper::Error {}
 
@@ -48,6 +49,8 @@ impl BlanketImpl for http::Error {}
 impl BlanketImpl for InvalidCommandInteraction {}
 
 impl BlanketImpl for ParsingError {}
+
+impl BlanketImpl for JoinError {}
 
 impl<T, E: BlanketImpl> Expectable<T> for Result<T, E> {
     fn expect_with(self, msg: &str) -> Result<T, ShutDown> {

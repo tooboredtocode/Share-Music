@@ -18,7 +18,7 @@ impl Context {
             HttpsConnectorBuilder::new()
                 .with_native_roots()
                 .https_or_http()
-                .enable_http2()
+                .enable_all_versions()
                 .wrap_connector(http_connector)
         )
     }

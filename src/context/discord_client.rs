@@ -18,7 +18,7 @@ impl Context {
     pub(super) async fn discord_client_from_config(config: &Config) -> ShareResult<(Client, Id<ApplicationMarker>)> {
         let builder = Client::builder()
             .token(config.discord.token.clone())
-            .default_allowed_mentions(AllowedMentions::builder().build());
+            .default_allowed_mentions(AllowedMentions::default());
 
         let client = builder.build();
 

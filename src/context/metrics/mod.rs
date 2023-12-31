@@ -4,21 +4,22 @@
  */
 
 use std::borrow::Cow;
+use std::collections::HashMap;
 use std::convert::Infallible;
 use std::fmt;
 use std::net::SocketAddr;
 use std::sync::Arc;
+use std::sync::atomic::AtomicU64;
 
 use hyper::{Body, Response, Server};
 use hyper::service::{make_service_fn, service_fn};
-use prometheus_client::encoding::{EncodeLabelSet, EncodeLabelValue};
-use prometheus_client::encoding::text::encode;
-use prometheus_client::metrics::counter::Counter;
-use prometheus_client::metrics::family::Family;
-use prometheus_client::metrics::gauge::Gauge;
-use prometheus_client::metrics::histogram::Histogram;
-use prometheus_client::registry::Registry;
+use parking_lot::Mutex;
+use prometheus_client::encoding::{EncodeLabelSet, EncodeLabelValue, text::encode};
+use prometheus_client::metrics::{counter::Counter, family::Family, gauge::Gauge, histogram::Histogram};
+use prometheus_client::registry::{Registry, Unit};
 use tracing::info;
+use twilight_gateway::ConnectionStatus;
+use twilight_gateway::stream::ShardRef;
 use twilight_model::gateway::event::Event;
 
 use crate::{Config, Context, TerminationFuture};
@@ -39,7 +40,9 @@ pub struct Metrics {
     pub connected_guilds: Family<GuildLabels, Gauge>,
     guild_store: GuildStore,
 
-    pub shard_states: Family<ShardLabels, Gauge>,
+    pub shard_states: Family<ShardStateLabels, Gauge>,
+    current_states: Mutex<HashMap<u64, String>>,
+    pub shard_latencies: Family<ShardLatencyLabels, Gauge<f64, AtomicU64>>,
     pub cluster_state: Family<ClusterLabels, Gauge>,
 
     pub third_party_api: Family<ThirdPartyLabels, Histogram>
@@ -60,9 +63,14 @@ pub struct EventLabels {
 }
 
 #[derive(Clone, Debug, Hash, PartialEq, Eq, EncodeLabelSet)]
-pub struct ShardLabels {
+pub struct ShardStateLabels {
     pub shard: u64,
     pub state: String
+}
+
+#[derive(Clone, Debug, Hash, PartialEq, Eq, EncodeLabelSet)]
+pub struct ShardLatencyLabels {
+    pub shard: u64,
 }
 
 #[derive(Clone, Debug, Hash, PartialEq, Eq, EncodeLabelSet)]
@@ -145,11 +153,19 @@ impl Metrics {
             gateway_events.clone()
         );
 
-        let shard_states = Family::<ShardLabels, Gauge>::default();
+        let shard_states = Family::<ShardStateLabels, Gauge>::default();
         r.register(
             "shard_states",
             "States of the shards",
             shard_states.clone()
+        );
+
+        let shard_latencies = Family::<ShardLatencyLabels, Gauge<f64, AtomicU64>>::default();
+        r.register_with_unit(
+            "shard_latencies",
+            "Latencies of the shards",
+            Unit::Seconds,
+            shard_latencies.clone()
         );
 
         let connected_guilds = Family::<GuildLabels, Gauge>::default();
@@ -186,41 +202,70 @@ impl Metrics {
             connected_guilds,
             guild_store,
             shard_states,
+            current_states: Mutex::new(HashMap::new()),
+            shard_latencies,
             cluster_state,
             third_party_api
         }
     }
 
-    pub fn update_cluster_metrics(&self, shard_id: u64, event: &Event, ctx: &Ctx) {
+    pub fn update_cluster_metrics(&self, shard: ShardRef, event: &Event, ctx: &Ctx) {
         if let Some(name) = event.kind().name() {
             self.gateway_events
                 .get_or_create(&EventLabels {
-                    shard: shard_id,
+                    shard: shard.id().number(),
                     event: Cow::from(name)
                 }).inc();
         }
 
-        self.guild_store.register(shard_id, event, ctx);
+        self.guild_store.register(shard.id().number(), event, ctx);
 
         match event {
-            Event::ShardConnected(_)
-            | Event::ShardConnecting(_)
-            | Event::ShardDisconnected(_)
-            | Event::ShardIdentifying(_)
-            | Event::ShardReconnecting(_)
-            | Event::ShardResuming(_) => {},
+            Event::GatewayHello(_)
+            | Event::GatewayReconnect
+            | Event::Ready(_)
+            | Event::Resumed
+            | Event::GatewayInvalidateSession(_)
+            | Event::GatewayClose(_) => {}
+            Event::GatewayHeartbeatAck => {
+                self.shard_latencies.get_or_create(
+                    &ShardLatencyLabels {
+                        shard: shard.id().number()
+                    }
+                ).set(shard.latency().recent()[0].as_secs_f64());
+
+                return;
+            }
             _ => return
         }
 
+        let mut lock = self.current_states.lock();
         self.shard_states.clear();
-        for (shard_id, info) in ctx.discord_cluster.info() {
+
+        lock.insert(
+            shard.id().number(),
+            shard_status_to_string(shard.status())
+        );
+        for (shard, state) in lock.iter() {
             self.shard_states
-                .get_or_create(&ShardLabels {
-                    shard: shard_id,
-                    state: info.stage().to_string()
+                .get_or_create(&ShardStateLabels {
+                    shard: *shard,
+                    state: state.clone()
                 }).inc();
         }
     }
+}
+
+fn shard_status_to_string(status: &ConnectionStatus) -> String {
+    use ConnectionStatus::*;
+
+    match status {
+        Connected => "Connected",
+        Disconnected { .. } => "Disconnected",
+        FatallyClosed { .. } => "FatallyClosed",
+        Identifying => "Identifying",
+        Resuming => "Resuming",
+    }.to_string()
 }
 
 impl Context {

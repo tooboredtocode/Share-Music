@@ -5,11 +5,9 @@
 
 use std::collections::HashMap;
 use std::ops::Deref;
-use std::time::Duration;
 
 use parking_lot::RwLock;
 use prometheus_client::encoding::EncodeLabelValue;
-use tracing::debug;
 use twilight_model::gateway::event::Event;
 use twilight_model::gateway::payload::incoming::{GuildCreate, GuildDelete, Ready};
 
@@ -40,14 +38,12 @@ impl GuildState {
 #[derive(Debug)]
 pub struct GuildStore {
     inner: RwLock<HashMap<u64, HashMap<u64, GuildState>>>,
-    may_resume: RwLock<HashMap<u64, HashMap<u64, GuildState>>>
 }
 
 impl GuildStore {
     pub fn new() -> Self {
         Self {
             inner: Default::default(),
-            may_resume: Default::default()
         }
     }
 
@@ -68,10 +64,8 @@ impl GuildStore {
     pub fn register(&self, shard_id: u64, event: &Event, ctx: &Ctx) {
         match event {
             Event::Ready(ready) => self.register_ready(shard_id, ready.deref()),
-            Event::Resumed => self.register_resume(shard_id),
             Event::GuildCreate(create) => self.register_create(shard_id, create.deref()),
-            Event::GuildDelete(delete) => self.register_delete(shard_id, delete.deref()),
-            Event::ShardDisconnected(_) => self.register_disconnect(shard_id, ctx),
+            Event::GuildDelete(delete) => self.register_delete(shard_id, delete),
             _ => return
         }
 
@@ -94,17 +88,6 @@ impl GuildStore {
         for guild in &ready.guilds {
             shard_store.insert(guild.id.get(), GuildState::Unavailable);
         }
-
-        let mut lock = self.may_resume.write();
-        lock.remove(&shard_id);
-    }
-
-    fn register_resume(&self, shard_id: u64) {
-        let mut lock = self.may_resume.write();
-        if let Some(stored) = lock.remove(&shard_id) {
-            let mut lock = self.inner.write();
-            lock.insert(shard_id, stored);
-        }
     }
 
     fn register_create(&self, shard_id: u64, create: &GuildCreate) {
@@ -126,22 +109,5 @@ impl GuildStore {
             true => shard_store.insert(delete.id.get(), GuildState::Unavailable),
             false => shard_store.remove(&delete.id.get())
         };
-    }
-
-    fn register_disconnect(&self, shard_id: u64, ctx: &Ctx) {
-        let mut lock = self.inner.write();
-        if let Some(s) = lock.remove(&shard_id) {
-            let mut lock = self.may_resume.write();
-            lock.insert(shard_id, s);
-
-            let context_clone = ctx.clone();
-            tokio::spawn(async move {
-                debug!("Starting Shard Info Cleanup Thread");
-                tokio::time::sleep(Duration::from_secs(60 * 5)).await;
-
-                let mut lock = context_clone.metrics.guild_store.may_resume.write();
-                lock.remove(&shard_id);
-            });
-        }
     }
 }

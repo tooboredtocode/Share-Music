@@ -8,33 +8,35 @@ use std::pin::Pin;
 use std::task::{Context, Poll};
 
 use futures_util::Stream;
-use twilight_gateway::cluster::Events;
+use twilight_gateway::error::ReceiveMessageError;
+use twilight_gateway::Shard;
+use twilight_gateway::stream::{ShardEventStream, ShardRef};
 use twilight_model::gateway::event::Event;
 
 use crate::{StateListener, TerminationFuture};
 
-pub struct EventPoller {
-    events: Events,
+pub struct EventStreamPoller<'a> {
+    event_stream: ShardEventStream<'a>,
     term: TerminationFuture
 }
 
-impl EventPoller {
-    pub fn new(events: Events, listener: StateListener) -> Self {
+impl<'a> EventStreamPoller<'a> {
+    pub fn new(shards: &'a mut Vec<Shard>, listener: StateListener) -> Self {
         Self {
-            events,
+            event_stream: ShardEventStream::new(shards.iter_mut()),
             term: TerminationFuture::new(listener)
         }
     }
 }
 
-impl Stream for EventPoller {
-    type Item = (u64, Event);
+impl<'a> Stream for EventStreamPoller<'a> {
+    type Item = (ShardRef<'a>, Result<Event, ReceiveMessageError>);
 
     fn poll_next(mut self: Pin<&mut Self>, cx: &mut Context<'_>) -> Poll<Option<Self::Item>> {
         if let Poll::Ready(_) = Pin::new(&mut self.term).poll(cx) {
             return Poll::Ready(None)
         }
 
-        Pin::new(&mut self.events).poll_next(cx)
+        Pin::new(&mut self.event_stream).poll_next(cx)
     }
 }

@@ -9,19 +9,20 @@ use hyper::Client;
 use hyper::client::HttpConnector;
 use hyper_rustls::HttpsConnector;
 use tracing::info;
-use twilight_gateway::Cluster;
+use twilight_gateway::{Shard, stream, Config as ShardConfig};
 use twilight_http::Client as TwilightClient;
 use twilight_model::id::Id;
 use twilight_model::id::marker::ApplicationMarker;
 
-use crate::{Config, EventPoller, ShareResult};
+use crate::{Config, ShareResult};
 use crate::config::colour::Options as ColourOptions;
+use crate::constants::cluster_consts;
 use crate::context::metrics::Metrics;
 use crate::context::state::State;
+use crate::util::error::Expectable;
 use crate::util::StateUpdater;
 
 mod discord_client;
-mod discord_cluster;
 pub mod state;
 pub mod metrics;
 mod http_client;
@@ -29,7 +30,6 @@ mod http_client;
 #[derive(Debug)]
 pub struct Context {
     pub discord_client: TwilightClient,
-    pub discord_cluster: Cluster,
     bot_id: Id<ApplicationMarker>,
 
     pub http_client: Client<HttpsConnector<HttpConnector>>,
@@ -51,11 +51,22 @@ pub struct SavedConfig {
 pub type Ctx = Arc<Context>;
 
 impl Context {
-    pub async fn new(config: &Config, snd: StateUpdater) -> ShareResult<(EventPoller, Arc<Self>)> {
+    pub async fn new(config: &Config, snd: StateUpdater) -> ShareResult<(Arc<Self>, Vec<Shard>)> {
         info!("Creating Cluster");
 
         let (discord_client, bot_id) = Self::discord_client_from_config(&config).await?;
-        let (discord_cluster, events) = Self::cluster_from_config(&config).await?;
+        let discord_shards = stream::create_recommended(
+            &discord_client,
+            ShardConfig::builder(
+                config.discord.token.clone(),
+                cluster_consts::GATEWAY_INTENTS
+            )
+                .presence(cluster_consts::presence())
+                .build(),
+            |_, builder| builder.build()
+        ).await
+            .expect_with("Failed to create recommended shards")?
+            .collect();
 
         let http_client = Self::create_http_client();
 
@@ -63,7 +74,6 @@ impl Context {
 
         let ctx: Arc<Self> = Context {
             discord_client,
-            discord_cluster,
             bot_id,
             http_client,
             cfg: SavedConfig {
@@ -75,8 +85,6 @@ impl Context {
         }.into();
 
         ctx.start_state_listener();
-        let events_poller = EventPoller::new(events, ctx.create_state_listener());
-
-        Ok((events_poller, ctx))
+        Ok((ctx, discord_shards))
     }
 }

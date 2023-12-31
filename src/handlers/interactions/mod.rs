@@ -29,7 +29,7 @@ mod messages;
     fields(
         inter_id = inter.application_id.get(),
         user_id = inter.author_id().map(|id| id.get()),
-        channel_id = inter.channel_id.map(|id| id.get()),
+        channel_id = inter.channel.as_ref().map(|channel| channel.id.get()),
         guild_id = inter.guild_id.map(|id| id.get())
     )
 )]
