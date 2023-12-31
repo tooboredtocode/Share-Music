@@ -15,6 +15,7 @@ use hyper::{Body, body, Response};
 use hyper::body::Bytes;
 use image::{DynamicImage, ImageError};
 use serde::de::DeserializeOwned;
+use tracing::instrument;
 
 #[derive(Debug)]
 pub enum ParsingError {
@@ -121,10 +122,12 @@ impl Future for ImageFuture {
     }
 }
 
+#[instrument(name = "parsing_response", level = "debug", skip_all)]
 pub fn parse<T>(resp: Response<Body>) -> ParsingFuture<T> {
     ParsingFuture::new(BytesFuture::from_response(resp))
 }
 
+#[instrument(name = "parsing_response", level = "debug", skip_all)]
 pub fn parse_image(resp: Response<Body>) -> ImageFuture {
     ImageFuture::new(BytesFuture::from_response(resp))
 }

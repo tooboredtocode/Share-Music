@@ -9,7 +9,7 @@ use std::time::Instant;
 use hyper::Body;
 use image::DynamicImage;
 use image::imageops::FilterType;
-use tracing::debug;
+use tracing::{debug, debug_span, instrument, Instrument};
 
 use hsl_pixel::HSLPixel;
 use pixel_group::PixelGroup;
@@ -54,6 +54,7 @@ struct PopulatedOptions {
     pub luminosity_factor: f32,
 }
 
+#[instrument(level = "debug", skip_all)]
 pub async fn get_dominant_colour(url: &String, context: &Ctx, options: Options) -> Option<RGBPixel> {
     let options = options.populate(context);
 
@@ -92,6 +93,7 @@ pub async fn get_dominant_colour(url: &String, context: &Ctx, options: Options) 
         .most_common_colour()
 }
 
+#[instrument(level = "debug", skip_all)]
 async fn fetch_image(url: &String, context: &Ctx) -> Option<DynamicImage> {
     debug!(url, "Fetching image");
 
@@ -110,6 +112,7 @@ async fn fetch_image(url: &String, context: &Ctx) -> Option<DynamicImage> {
     let now = Instant::now();
     let resp = context.http_client
         .request(req)
+        .instrument(debug_span!("http_request"))
         .await
         .warn_with("Failed to fetch thumbnail")?;
     let diff = now.elapsed();

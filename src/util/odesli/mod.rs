@@ -8,6 +8,7 @@ use std::fmt::{Display, Formatter};
 use std::time::Instant;
 
 use hyper::{Body, Method};
+use tracing::{instrument, Instrument};
 
 pub use api_type::*;
 pub use error::ApiErr;
@@ -65,6 +66,7 @@ impl Display for OdesliEndpoints {
     }
 }
 
+#[instrument(level = "debug", skip_all)]
 pub async fn fetch_from_api(url: &String, context: &Ctx) -> Result<OdesliResponse, ApiErr> {
     let req_data = OdesliEndpoints::links(url);
 
@@ -74,7 +76,10 @@ pub async fn fetch_from_api(url: &String, context: &Ctx) -> Result<OdesliRespons
         .body(Body::empty())?;
 
     let now = Instant::now();
-    let resp = context.http_client.request(req).await?;
+    let resp = context.http_client
+        .request(req)
+        .instrument(tracing::info_span!("http_request"))
+        .await?;
     let diff = now.elapsed();
 
     context.metrics.third_party_api

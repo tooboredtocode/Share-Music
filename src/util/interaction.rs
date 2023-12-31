@@ -3,7 +3,8 @@
  *  All Rights Reserved
  */
 
-use tracing::warn;
+use tokio::task::JoinHandle;
+use tracing::{debug_span, Instrument, warn};
 use twilight_model::application::interaction::application_command::CommandData;
 use twilight_model::application::interaction::Interaction;
 use twilight_model::channel::Message;
@@ -57,23 +58,29 @@ pub fn get_message(data: &CommandData) -> EmptyResult<&Message> {
     }
 }
 
-pub async fn defer(inter: &Interaction, context: &Ctx) -> EmptyResult<()> {
-    if let Err(_) = context.interaction_client()
-        .create_response(
-            inter.id,
-            inter.token.as_str(),
-            &InteractionResponse {
-                kind: InteractionResponseType::DeferredChannelMessageWithSource,
-                data: None
-            }
-        )
-        .await
-    {
-        warn!("Failed to defer Response, aborting handler");
-        return Err(());
-    }
+pub fn defer(inter: &Interaction, context: &Ctx) -> JoinHandle<EmptyResult<()>> {
+    let inter_id = inter.id;
+    let inter_token = inter.token.clone();
+    let ctx = context.clone();
 
-    Ok(())
+    tokio::spawn(async move {
+        if let Err(_) = ctx.interaction_client()
+            .create_response(
+                inter_id,
+                inter_token.as_str(),
+                &InteractionResponse {
+                    kind: InteractionResponseType::DeferredChannelMessageWithSource,
+                    data: None
+                }
+            )
+            .await
+        {
+            warn!("Failed to defer Response, aborting handler");
+            return Err(());
+        }
+
+        Ok(())
+    }.instrument(debug_span!("deferring_response")))
 }
 
 pub async fn respond_with(inter: &Interaction, context: &Ctx, msg: &str) {

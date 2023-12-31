@@ -3,7 +3,8 @@
  *  All Rights Reserved
  */
 
-use tracing::{debug, instrument};
+use std::future::IntoFuture;
+use tracing::{debug, debug_span, instrument, Instrument};
 use twilight_model::application::interaction::application_command::CommandData;
 use twilight_model::application::interaction::Interaction;
 use twilight_util::builder::embed::{EmbedBuilder, ImageSource};
@@ -31,10 +32,14 @@ async fn handle_inner(inter: &Interaction, data: &CommandData, context: Ctx) -> 
     let options: TestConstsCommandData = get_options(data, &context).await?;
 
     debug!("Deferring Response");
-    defer(inter, &context).await?;
+    let defer_future = defer(inter, &context);
 
     debug!("Fetching Dominant Colour of Image");
     let colour = get_dominant_colour(&options.url, &context, (&options).into()).await;
+
+    defer_future.await
+        .warn_with("Failed to join the defer future")
+        .ok_or(())??;
 
     let embed = build_embed(&options.url, colour);
 
@@ -42,6 +47,8 @@ async fn handle_inner(inter: &Interaction, data: &CommandData, context: Ctx) -> 
         .create_followup(inter.token.as_str())
         .embeds(&[embed.build()])
         .expect("Somehow we built an invalid embed, this should never happen")
+        .into_future()
+        .instrument(debug_span!("sending_response"))
         .await
         .warn_with("Failed to send the response to the user");
 

@@ -3,7 +3,8 @@
  *  All Rights Reserved
  */
 
-use tracing::{debug, instrument};
+use std::future::IntoFuture;
+use tracing::{debug, debug_span, instrument, Instrument};
 use twilight_model::application::interaction::application_command::CommandData;
 use twilight_model::application::interaction::Interaction;
 
@@ -32,18 +33,25 @@ async fn handle_inner(inter: &Interaction, data: &CommandData, context: Ctx) -> 
     validate_url(&options, inter, &context).await?;
 
     debug!("User passed valid arguments, deferring Response");
-    defer(inter, &context).await?;
+    let defer_future = defer(&inter, &context);
 
     let embed = common::embed_routine(
         &options.url,
         &context,
         inter
-    ).await?;
+    ).instrument(debug_span!("embed_routine"))
+        .await?;
+
+    defer_future.await
+        .warn_with("Failed to join the defer future")
+        .ok_or(())??;
 
     let r = context.interaction_client()
         .create_followup(inter.token.as_str())
         .embeds(&[embed.build()])
         .expect("Somehow we built an invalid embed, this should never happen")
+        .into_future()
+        .instrument(debug_span!("sending_response"))
         .await
         .warn_with("Failed to send the response to the user");
 

@@ -3,12 +3,13 @@
  *  All Rights Reserved
  */
 
+use std::future::IntoFuture;
 use std::time::Duration;
 
 use lazy_regex::{Lazy, lazy_regex};
 use regex::Regex;
 use tokio::time;
-use tracing::debug;
+use tracing::{debug, debug_span, Instrument};
 use twilight_model::application::interaction::Interaction;
 use twilight_util::builder::embed::{EmbedAuthorBuilder, EmbedBuilder, EmbedFooterBuilder, ImageSource};
 
@@ -50,6 +51,8 @@ pub async fn map_odesli_response(
                 .create_followup(inter.token.as_str())
                 .content(messages::error((&inter.locale).into()))
                 .expect("Somehow the static string is too long, this should never happen")
+                .into_future()
+                .instrument(debug_span!("sending_error_message"))
                 .await
                 .warn_with("Failed to inform user of the error")
             {
@@ -69,6 +72,8 @@ pub async fn map_odesli_response(
 
                         ctx.discord_client
                             .delete_message(msg.channel_id, msg.id)
+                            .into_future()
+                            .instrument(debug_span!("deleting_error_message"))
                             .await
                             .warn_with("Failed to delete Error Message")
                     });
@@ -124,6 +129,7 @@ pub fn build_embed(data: &OdesliResponse, entity: EntityData, colour: Option<RGB
     embed
 }
 
+// NOTE: This future is not instrumented as it should be instrumented in the calling function
 pub async fn embed_routine(url: &String, context: &Ctx, inter: &Interaction) -> EmptyResult<EmbedBuilder> {
     debug!("Fetching information from API");
     let data = map_odesli_response(

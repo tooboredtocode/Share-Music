@@ -55,7 +55,6 @@ async fn sync(ctx: &Ctx) -> ShareResult<()> {
             share::command(),
             find_links::command()
         ])
-        .exec()
         .await
         .expect_with("Failed to Synchronize Commands")?;
 
@@ -67,7 +66,6 @@ async fn sync(ctx: &Ctx) -> ShareResult<()> {
                     test_colour_consts::command()
                 ]
             )
-            .exec()
             .await
             .expect_with("Failed to Synchronize Commands")?;
     }
