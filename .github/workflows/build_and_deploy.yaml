@@ -74,8 +74,8 @@ jobs:
           context: .
           file: ./Dockerfile
           push: true
-          cache-from: type=registry,ref=ghcr.io/tooboredtocode/share-music:latest
-          cache-to: type=inline
+          cache-from: type=registry,ref=ghcr.io/tooboredtocode/share-music-cache:latest
+          cache-to: type=registry,ref=ghcr.io/tooboredtocode/share-music-cache:latest,mode=max
           tags: |
             ghcr.io/tooboredtocode/share-music:latest
             ghcr.io/tooboredtocode/share-music:${{ needs.getversion.outputs.version }}
