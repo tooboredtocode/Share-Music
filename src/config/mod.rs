@@ -28,9 +28,16 @@ pub struct Config {
 impl Config {
     pub fn load() -> Result<Self, Error> {
         Figment::new()
-            .merge(Yaml::file(config_consts::YAML_FILE_PATH))
-            .merge(Json::file(config_consts::JSON_FILE_PATH))
-            .join(Env::prefixed(config_consts::ENV_PREFIX).split("."))
+            .adjoin(Yaml::file(config_consts::YAML_FILE_PATH))
+            .adjoin(Json::file(config_consts::JSON_FILE_PATH))
+            .merge(Env::raw().map(|k| {
+                // maps the first underscore in the key to a dot, nesting the key
+                // e.g. "discord_token" -> "discord.token"
+                match k.as_str().split_once("_") {
+                    Some((r, l)) => format!("{}.{}", r, l).into(),
+                    None => k.into()
+                }
+            }))
             .extract()
     }
 }

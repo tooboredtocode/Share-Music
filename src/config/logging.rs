@@ -27,7 +27,7 @@ pub enum Format {
 
 impl Default for Format {
     fn default() -> Self {
-        Self::Json
+        Self::Ascii
     }
 }
 
@@ -49,7 +49,7 @@ pub enum Level {
 
 impl Default for Level {
     fn default() -> Self {
-        Self::Trace
+        Self::Info
     }
 }
 
