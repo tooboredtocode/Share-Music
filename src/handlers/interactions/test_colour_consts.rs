@@ -14,7 +14,7 @@ use crate::context::Ctx;
 use crate::util::colour::{get_dominant_colour, RGBPixel};
 use crate::util::EmptyResult;
 use crate::util::error::Expectable;
-use crate::util::interaction::{defer, get_options};
+use crate::util::interaction::{defer, get_options, respond_with};
 
 pub async fn handle(inter: &Interaction, data: &CommandData, context: Ctx) {
     // use an inner function to make splitting the code easier
@@ -31,6 +31,15 @@ async fn handle_inner(inter: &Interaction, data: &CommandData, context: Ctx) -> 
 
     let options: TestConstsCommandData = get_options(data, &context).await?;
 
+    let image_source = match ImageSource::url(&options.url) {
+        Ok(source) => source,
+        Err(_) => {
+            debug!("URL is not valid, informing user");
+            respond_with(inter, &context, "Please provide a valid image url!").await;
+            return Ok(());
+        }
+    };
+
     debug!("Deferring Response");
     let defer_future = defer(inter, &context);
 
@@ -41,7 +50,7 @@ async fn handle_inner(inter: &Interaction, data: &CommandData, context: Ctx) -> 
         .warn_with("Failed to join the defer future")
         .ok_or(())??;
 
-    let embed = build_embed(&options.url, colour);
+    let embed = build_embed(image_source, colour);
 
     let r = context.interaction_client()
         .create_followup(inter.token.as_str())
@@ -59,12 +68,9 @@ async fn handle_inner(inter: &Interaction, data: &CommandData, context: Ctx) -> 
     Ok(())
 }
 
-fn build_embed(url: &String, colour: Option<RGBPixel>) -> EmbedBuilder {
-    let mut embed = EmbedBuilder::new();
-
-    if let Ok(src) = ImageSource::url(url) {
-        embed = embed.image(src)
-    }
+fn build_embed(url: ImageSource, colour: Option<RGBPixel>) -> EmbedBuilder {
+    let mut embed = EmbedBuilder::new()
+        .image(url);
 
     if let Some(colour) = colour {
         embed = embed.color(colour.to_hex());
