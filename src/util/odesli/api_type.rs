@@ -6,12 +6,10 @@
 use std::collections::HashMap;
 use std::fmt;
 use std::fmt::{Display, Formatter};
-use std::str::FromStr;
 
-use serde::de::{value, IntoDeserializer};
-use serde::{Deserialize, Deserializer};
+use serde::{Deserialize, Serialize};
 
-#[derive(Debug, Deserialize)]
+#[derive(Debug, Serialize, Deserialize)]
 #[serde(rename_all = "camelCase")]
 pub struct OdesliResponse {
     /// The unique ID for the input entity that was supplied in the request. The
@@ -116,7 +114,7 @@ impl OdesliResponse {
     }
 }
 
-#[derive(Clone, Debug, Deserialize)]
+#[derive(Clone, Debug, Serialize, Deserialize)]
 #[serde(rename_all = "camelCase")]
 pub struct Links {
     /// The unique ID for this entity. Use it to look up data about this entity
@@ -135,7 +133,7 @@ pub struct Links {
     pub native_app_uri_desktop: Option<String>,
 }
 
-#[derive(Clone, Debug, Deserialize)]
+#[derive(Clone, Debug, Serialize, Deserialize)]
 #[serde(rename_all = "camelCase")]
 pub struct Entity {
     /// This is the unique identifier on the streaming platform/API provider
@@ -161,16 +159,15 @@ pub struct Entity {
     pub platforms: Vec<Platform>,
 }
 
-#[derive(Copy, Clone, Eq, PartialEq, Debug, Deserialize)]
+#[derive(Copy, Clone, Eq, PartialEq, Debug, Serialize, Deserialize)]
 #[serde(rename_all = "lowercase")]
 pub enum Type {
     Song,
     Album,
 }
 
-#[derive(Clone, Eq, PartialEq, Debug, Hash, Deserialize)]
+#[derive(Clone, Eq, PartialEq, Debug, Hash, Serialize, Deserialize)]
 #[serde(rename_all = "camelCase")]
-#[serde(remote = "Platform")]
 pub enum Platform {
     Spotify,
     #[allow(non_camel_case_types)]
@@ -193,7 +190,7 @@ pub enum Platform {
     Audius,
     Audiomack,
     BoomPlay,
-    #[serde(skip_deserializing)]
+    #[serde(untagged)]
     Other(String),
 }
 
@@ -211,28 +208,8 @@ impl Display for Platform {
     }
 }
 
-impl FromStr for Platform {
-    type Err = value::Error;
-
-    fn from_str(s: &str) -> Result<Self, Self::Err> {
-        Self::deserialize(s.into_deserializer())
-    }
-}
-
-impl<'de> Deserialize<'de> for Platform {
-    fn deserialize<D>(deserializer: D) -> Result<Self, D::Error>
-    where
-        D: Deserializer<'de>,
-    {
-        let s = String::deserialize(deserializer)?;
-        let deserialized = Self::from_str(&s).unwrap_or_else(|_| Self::Other(s));
-        Ok(deserialized)
-    }
-}
-
-#[derive(Clone, Eq, PartialEq, Debug, Hash, Deserialize)]
+#[derive(Clone, Eq, PartialEq, Debug, Hash, Serialize, Deserialize)]
 #[serde(rename_all = "lowercase")]
-#[serde(remote = "APIProvider")]
 pub enum APIProvider {
     Spotify,
     #[allow(non_camel_case_types)]
@@ -251,7 +228,7 @@ pub enum APIProvider {
     Audiomack,
     BoomPlay,
     Anghami,
-    #[serde(skip_deserializing)]
+    #[serde(untagged)]
     Other(String),
 }
 
@@ -286,24 +263,5 @@ impl Display for APIProvider {
             Self::Other(str) => write!(f, "{}", str),
             other => write!(f, "{:?}", other),
         }
-    }
-}
-
-impl FromStr for APIProvider {
-    type Err = value::Error;
-
-    fn from_str(s: &str) -> Result<Self, Self::Err> {
-        Self::deserialize(s.into_deserializer())
-    }
-}
-
-impl<'de> Deserialize<'de> for APIProvider {
-    fn deserialize<D>(deserializer: D) -> Result<Self, D::Error>
-    where
-        D: Deserializer<'de>,
-    {
-        let s = String::deserialize(deserializer)?;
-        let deserialized = Self::from_str(&s).unwrap_or_else(|_| Self::Other(s));
-        Ok(deserialized)
     }
 }

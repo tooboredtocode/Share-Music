@@ -21,7 +21,7 @@ pub struct EventStreamPoller<'a> {
 }
 
 impl<'a> EventStreamPoller<'a> {
-    pub fn new(shards: &'a mut Vec<Shard>, listener: StateListener) -> Self {
+    pub fn new(shards: &'a mut [Shard], listener: StateListener) -> Self {
         Self {
             event_stream: ShardEventStream::new(shards.iter_mut()),
             term: TerminationFuture::new(listener),
@@ -33,7 +33,7 @@ impl<'a> Stream for EventStreamPoller<'a> {
     type Item = (ShardRef<'a>, Result<Event, ReceiveMessageError>);
 
     fn poll_next(mut self: Pin<&mut Self>, cx: &mut Context<'_>) -> Poll<Option<Self::Item>> {
-        if let Poll::Ready(_) = Pin::new(&mut self.term).poll(cx) {
+        if Pin::new(&mut self.term).poll(cx).is_ready() {
             return Poll::Ready(None);
         }
 

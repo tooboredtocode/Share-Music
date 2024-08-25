@@ -5,12 +5,12 @@
 
 use std::collections::HashMap;
 
-use super::{HSLPixel, PopulatedOptions, RGBPixel};
+use super::{HslPixel, PopulatedOptions, RGBPixel};
 
 #[derive(Debug)]
 pub struct PixelGroup {
     pub group: RGBPixel,
-    pub group_hsl: HSLPixel,
+    pub group_hsl: HslPixel,
     pub group_luminosity: f32,
     pub count: u32,
     pub pixels: HashMap<RGBPixel, u32>,
@@ -38,10 +38,7 @@ impl PixelGroup {
     }
 
     pub fn most_common_colour(&self) -> Option<RGBPixel> {
-        self.pixels
-            .iter()
-            .max_by(|a, b| a.1.cmp(&b.1))
-            .map(|v| *v.0)
+        self.pixels.iter().max_by(|a, b| a.1.cmp(b.1)).map(|v| *v.0)
     }
 }
 
@@ -59,7 +56,7 @@ impl FromIterator<RGBPixel> for Vec<PixelGroup> {
             *pixel_count += 1;
         }
 
-        let res: Vec<PixelGroup> = res.into_iter().map(|(_, g)| g).collect();
+        let res: Vec<PixelGroup> = res.into_values().collect();
 
         res
     }

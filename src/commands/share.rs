@@ -18,7 +18,7 @@ pub const URL_OPTION_NAME: &str = "url";
 fn url_option() -> StringBuilder {
     StringBuilder::new(URL_OPTION_NAME, "The Link for the Song/Album")
         .description_localizations([(
-            DiscordLocale::GERMAN.to_str(),
+            DiscordLocale::German.to_str(),
             "Der Link von dem Song/Album",
         )])
         .autocomplete(false)
@@ -34,7 +34,7 @@ pub fn command() -> Command {
         CommandType::ChatInput,
     )
     .description_localizations([(
-        DiscordLocale::GERMAN.to_str(),
+        DiscordLocale::German.to_str(),
         "Teile Musik von für alle Plattformen",
     )])
     .option(url_option())

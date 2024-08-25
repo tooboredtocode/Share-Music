@@ -53,7 +53,7 @@ impl Context {
     pub async fn new(config: &Config, snd: StateUpdater) -> ShareResult<(Arc<Self>, Vec<Shard>)> {
         info!("Creating Cluster");
 
-        let (discord_client, bot_id) = Self::discord_client_from_config(&config).await?;
+        let (discord_client, bot_id) = Self::discord_client_from_config(config).await?;
         let discord_shards = stream::create_recommended(
             &discord_client,
             ShardConfig::builder(

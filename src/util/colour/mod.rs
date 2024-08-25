@@ -11,7 +11,7 @@ use image::imageops::FilterType;
 use image::DynamicImage;
 use tracing::{debug, debug_span, instrument, Instrument};
 
-use hsl_pixel::HSLPixel;
+use hsl_pixel::HslPixel;
 use pixel_group::PixelGroup;
 pub use rgb_pixel::RGBPixel;
 
@@ -65,7 +65,7 @@ pub async fn get_dominant_colour(
     let img = fetch_image(url, context).await?;
 
     let num_pixels = img.height() * img.width();
-    let mut groups: Vec<PixelGroup> = img.to_rgb8().pixels().map(|i| RGBPixel::from(i)).collect();
+    let mut groups: Vec<PixelGroup> = img.to_rgb8().pixels().map(RGBPixel::from).collect();
 
     groups = {
         let mut res = Vec::new();

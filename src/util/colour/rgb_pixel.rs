@@ -29,7 +29,7 @@ impl RGBPixel {
         f32::sqrt((0.299 * (red * red)) + (0.587 * (green * green)) + (0.114 * (blue * blue)))
     }
 
-    pub fn to_hex(&self) -> u32 {
+    pub fn to_hex(self) -> u32 {
         ((self.red as u32) << 16) + ((self.green as u32) << 8) + (self.blue as u32)
     }
 }

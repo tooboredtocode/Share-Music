@@ -27,7 +27,7 @@ pub async fn sync_commands(ctx: &Ctx) -> ShareResult<()> {
 
 #[cfg(debug_assertions)]
 async fn sync(ctx: &Ctx) -> ShareResult<()> {
-    if ctx.cfg.debug_server.len() == 0 {
+    if ctx.cfg.debug_server.is_empty() {
         warn!("No Debug Servers were configured")
     }
 

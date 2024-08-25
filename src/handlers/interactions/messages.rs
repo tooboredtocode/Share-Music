@@ -8,7 +8,7 @@ use crate::util::discord_locales::DiscordLocale;
 #[inline]
 pub const fn invalid_url(locale: DiscordLocale) -> &'static str {
     match locale {
-        DiscordLocale::GERMAN => {
+        DiscordLocale::German => {
             "Bitte sende mir einen validen Link, \
             ich kann nur mit Links von den folgenden Plattformen arbeiten:\n\
             Spotify, iTunes, Apple Music, YouTube, YouTube Music, Pandora, Deezer, Tidal, \
@@ -25,7 +25,7 @@ pub const fn invalid_url(locale: DiscordLocale) -> &'static str {
 #[inline]
 pub const fn no_links_found(locale: DiscordLocale) -> &'static str {
     match locale {
-        DiscordLocale::GERMAN => {
+        DiscordLocale::German => {
             "Es konnten keine uns bekannten links in der Nachricht gefunden werden"
         }
         _ => "Couldn't find any links in the message",
@@ -35,7 +35,7 @@ pub const fn no_links_found(locale: DiscordLocale) -> &'static str {
 #[inline]
 pub const fn error(locale: DiscordLocale) -> &'static str {
     match locale {
-        DiscordLocale::GERMAN => {
+        DiscordLocale::German => {
             "Ein unerwarteter Fehler ist passiert, die Developer wurden benachrichtigt"
         }
         _ => "An unexpected error has occurred, the dev team has been alerted",

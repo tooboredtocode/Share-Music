@@ -51,7 +51,7 @@ pub async fn map_odesli_response(
     match resp.warn_with("Failed to get the data from the api") {
         Some(s) => Ok(s),
         None => {
-            match context
+            if let Some(msg_resp) = context
                 .interaction_client()
                 .create_followup(inter.token.as_str())
                 .content(messages::error((&inter.locale).into()))
@@ -61,30 +61,27 @@ pub async fn map_odesli_response(
                 .await
                 .warn_with("Failed to inform user of the error")
             {
-                Some(msg_resp) => {
-                    let msg = match msg_resp.model().await {
-                        Ok(ok) => ok,
-                        Err(_) => return Err(()),
-                    };
+                let msg = match msg_resp.model().await {
+                    Ok(ok) => ok,
+                    Err(_) => return Err(()),
+                };
 
-                    let ctx = context.clone();
+                let ctx = context.clone();
 
-                    tokio::spawn(async move {
-                        let _ = time::timeout(
-                            Duration::from_secs(15),
-                            TerminationFuture::new(ctx.create_state_listener()),
-                        )
-                        .await;
+                tokio::spawn(async move {
+                    let _ = time::timeout(
+                        Duration::from_secs(15),
+                        TerminationFuture::new(ctx.create_state_listener()),
+                    )
+                    .await;
 
-                        ctx.discord_client
-                            .delete_message(msg.channel_id, msg.id)
-                            .into_future()
-                            .instrument(debug_span!("deleting_error_message"))
-                            .await
-                            .warn_with("Failed to delete Error Message")
-                    });
-                }
-                None => {}
+                    ctx.discord_client
+                        .delete_message(msg.channel_id, msg.id)
+                        .into_future()
+                        .instrument(debug_span!("deleting_error_message"))
+                        .await
+                        .warn_with("Failed to delete Error Message")
+                });
             }
 
             Err(())
@@ -150,8 +147,8 @@ pub async fn embed_routine(
     let entity_data = data.get_data();
     debug!(
         "Got data from api: {} by {}",
-        (&entity_data.title).as_ref().unwrap_or(&"<x>".into()),
-        (&entity_data.artist_name).as_ref().unwrap_or(&"<x>".into())
+        entity_data.title.as_ref().unwrap_or(&"<x>".into()),
+        entity_data.artist_name.as_ref().unwrap_or(&"<x>".into())
     );
 
     let colour = match &entity_data.thumbnail_url {

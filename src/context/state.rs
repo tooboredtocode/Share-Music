@@ -33,10 +33,7 @@ impl ClusterState {
     }
 
     pub fn is_terminating(&self) -> bool {
-        match self {
-            Self::Terminating | Self::Crashing => true,
-            _ => false,
-        }
+        matches!(self, Self::Terminating | Self::Crashing)
     }
 }
 
@@ -63,7 +60,7 @@ impl State {
             new_state.name()
         );
 
-        *state = new_state.clone();
+        *state = new_state;
         let _ = self.send.send((new_state, true));
     }
 

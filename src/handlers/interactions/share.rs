@@ -29,7 +29,7 @@ async fn handle_inner(inter: &Interaction, data: &CommandData, context: Ctx) -> 
     validate_url(&options, inter, &context).await?;
 
     debug!("User passed valid arguments, deferring Response");
-    let defer_future = defer(&inter, &context);
+    let defer_future = defer(inter, &context);
 
     let embed = common::embed_routine(&options.url, &context, inter)
         .instrument(debug_span!("embed_routine"))

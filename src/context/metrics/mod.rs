@@ -94,6 +94,7 @@ pub struct ThirdPartyLabels {
 }
 
 #[derive(Clone, Debug, Hash, PartialEq, Eq, EncodeLabelValue)]
+#[allow(clippy::upper_case_acronyms)]
 pub enum Method {
     GET,
     POST,

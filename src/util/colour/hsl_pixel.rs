@@ -6,19 +6,19 @@
 use super::RGBPixel;
 
 #[derive(Copy, Clone, PartialEq, Debug)]
-pub struct HSLPixel {
+pub struct HslPixel {
     pub hue: f32,
     pub saturation: f32,
     pub lightness: f32,
 }
 
-enum RGB {
+enum Rgb {
     Red,
     Green,
     Blue,
 }
 
-impl RGB {
+impl Rgb {
     fn from_min(r: f32, g: f32, b: f32) -> (Self, f32) {
         let (min, val) = if r < g {
             (Self::Red, r)
@@ -48,14 +48,14 @@ impl RGB {
     }
 }
 
-impl From<RGBPixel> for HSLPixel {
+impl From<RGBPixel> for HslPixel {
     fn from(rgb: RGBPixel) -> Self {
         let red = rgb.red as f32 / 255.0;
         let green = rgb.green as f32 / 255.0;
         let blue = rgb.blue as f32 / 255.0;
 
-        let (max, max_val) = RGB::from_max(red, green, blue);
-        let (_, min_val) = RGB::from_min(red, green, blue);
+        let (max, max_val) = Rgb::from_max(red, green, blue);
+        let (_, min_val) = Rgb::from_min(red, green, blue);
 
         let lightness = (max_val + min_val) / 2.0;
 
@@ -76,7 +76,7 @@ impl From<RGBPixel> for HSLPixel {
         };
 
         let mut hue = match max {
-            RGB::Red => {
+            Rgb::Red => {
                 let mut res = (green - blue) / delta;
 
                 if green < blue {
@@ -85,8 +85,8 @@ impl From<RGBPixel> for HSLPixel {
 
                 res
             }
-            RGB::Green => ((blue - red) / delta) + 2.0,
-            RGB::Blue => ((red - green) / delta) + 4.0,
+            Rgb::Green => ((blue - red) / delta) + 2.0,
+            Rgb::Blue => ((red - green) / delta) + 4.0,
         };
 
         hue /= 6.0;

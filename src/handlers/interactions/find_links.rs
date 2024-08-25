@@ -36,7 +36,7 @@ async fn handle_inner(inter: &Interaction, data: &CommandData, context: Ctx) -> 
         .take(5)
         .collect();
 
-    if links.len() == 0 {
+    if links.is_empty() {
         debug!("Could not find any links, informing user");
 
         respond_with(inter, &context, no_links_found((&inter.locale).into())).await;

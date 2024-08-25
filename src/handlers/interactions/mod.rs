@@ -33,6 +33,7 @@ mod test_colour_consts;
     )
 )]
 pub async fn handle(inter: Interaction, context: Ctx) {
+    #[allow(clippy::single_match)]
     match inter.kind {
         InteractionType::ApplicationCommand => handle_application_commands(inter, context).await,
         _ => {}
@@ -51,6 +52,7 @@ async fn handle_application_commands(inter: Interaction, context: Ctx) {
         }
     };
 
+    #[allow(clippy::single_match)]
     match data {
         InteractionData::ApplicationCommand(data) => {
             let data = data.deref();

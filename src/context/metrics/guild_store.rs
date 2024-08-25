@@ -82,7 +82,7 @@ impl GuildStore {
 
     fn register_ready(&self, shard_id: u64, ready: &Ready) {
         let mut lock = self.inner.write();
-        let shard_store = lock.entry(shard_id).or_insert(Default::default());
+        let shard_store = lock.entry(shard_id).or_default();
 
         for guild in &ready.guilds {
             shard_store.insert(guild.id.get(), GuildState::Unavailable);
@@ -91,14 +91,14 @@ impl GuildStore {
 
     fn register_create(&self, shard_id: u64, create: &GuildCreate) {
         let mut lock = self.inner.write();
-        let shard_store = lock.entry(shard_id).or_insert(Default::default());
+        let shard_store = lock.entry(shard_id).or_default();
 
         shard_store.insert(create.id.get(), GuildState::from(create.unavailable));
     }
 
     fn register_delete(&self, shard_id: u64, delete: &GuildDelete) {
         let mut lock = self.inner.write();
-        let shard_store = lock.entry(shard_id).or_insert(Default::default());
+        let shard_store = lock.entry(shard_id).or_default();
 
         match delete.unavailable {
             true => shard_store.insert(delete.id.get(), GuildState::Unavailable),

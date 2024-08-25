@@ -29,7 +29,7 @@ where
 
     fn expect_with_state(self, msg: &str, ctx: &Ctx) -> Result<T, ShutDown> {
         let res = self.expect_with(msg);
-        if let Err(_) = res {
+        if res.is_err() {
             ctx.set_state(ClusterState::Crashing);
         }
 

@@ -89,7 +89,7 @@ impl<T: DeserializeOwned + Unpin> Future for ParsingFuture<T> {
         match Pin::new(&mut self.future).poll(cx) {
             Poll::Ready(Ok(bytes)) => Poll::Ready(
                 serde_json::from_slice(&Bytes::from(bytes))
-                    .map_err(|source| ParsingError::DeserializingJson(source)),
+                    .map_err(ParsingError::DeserializingJson),
             ),
             Poll::Ready(Err(source)) => Poll::Ready(Err(source)),
             Poll::Pending => Poll::Pending,
@@ -113,8 +113,7 @@ impl Future for ImageFuture {
     fn poll(mut self: Pin<&mut Self>, cx: &mut Context<'_>) -> Poll<Self::Output> {
         match Pin::new(&mut self.future).poll(cx) {
             Poll::Ready(Ok(bytes)) => Poll::Ready(
-                image::load_from_memory(&*bytes)
-                    .map_err(|source| ParsingError::DeserializingImage(source)),
+                image::load_from_memory(&bytes).map_err(ParsingError::DeserializingImage),
             ),
             Poll::Ready(Err(source)) => Poll::Ready(Err(source)),
             Poll::Pending => Poll::Pending,

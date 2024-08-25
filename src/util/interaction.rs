@@ -29,7 +29,7 @@ where
     {
         Some(s) => s,
         None => {
-            if let Err(_) = sync_commands(context).await {
+            if sync_commands(context).await.is_err() {
                 context.set_state(ClusterState::Crashing)
             }
             return Err(());
@@ -64,7 +64,7 @@ pub fn defer(inter: &Interaction, context: &Ctx) -> JoinHandle<EmptyResult<()>> 
 
     tokio::spawn(
         async move {
-            if let Err(_) = ctx
+            if let Err(e) = ctx
                 .interaction_client()
                 .create_response(
                     inter_id,
@@ -76,7 +76,7 @@ pub fn defer(inter: &Interaction, context: &Ctx) -> JoinHandle<EmptyResult<()>> 
                 )
                 .await
             {
-                warn!("Failed to defer Response, aborting handler");
+                warn!("Failed to defer Response, aborting handler: {}", e);
                 return Err(());
             }
 
