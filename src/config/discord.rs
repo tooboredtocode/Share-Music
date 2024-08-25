@@ -9,5 +9,13 @@ use serde::Deserialize;
 pub struct Options {
     pub token: String,
     #[serde(default)]
+    pub cluster_id: u64,
+    #[serde(default = "default_cluster_count")]
+    pub cluster_count: u64,
+    #[serde(default)]
     pub debug_server: Vec<u64>,
+}
+
+fn default_cluster_count() -> u64 {
+    1
 }
