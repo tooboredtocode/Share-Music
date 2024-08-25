@@ -184,7 +184,7 @@ impl Metrics {
         );
 
         let third_party_api = Family::<ThirdPartyLabels, Histogram>::new_with_constructor(
-            || Histogram::new([0.005, 0.01, 0.025, 0.05, 0.1, 0.25, 0.5, 1.0, 2.5, 5.0, 10.0].into_iter())
+            || Histogram::new([0.1, 0.15, 0.2, 0.3, 0.5, 0.75, 1.0, 1.5, 2.0, 3.0, 5.0, 7.5, 10.0, 15.0, 20.0].into_iter())
         );
         r.register(
             "3rd_party_api_request_duration_seconds",
