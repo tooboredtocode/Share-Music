@@ -7,6 +7,8 @@ on:
     paths:
       # Only run when the Cargo.toml file changes, since that's the only way the version will change
       - "Cargo.toml"
+      # Run when the workflow file changes, so deploying changes can be tested
+      - ".github/workflows/build_and_deploy.yaml"
 
 jobs:
   getversion:
@@ -33,7 +35,7 @@ jobs:
     needs: getversion
     runs-on: ubuntu-latest
     outputs:
-      isnewtag: ${{ needs.getversion.outputs.version }}
+      isnewtag: ${{ steps.create_tag.outputs.isnewtag }}
     steps:
       - name: Create the Tag
         uses: actions/github-script@v7
@@ -42,6 +44,7 @@ jobs:
           script: |
             // Try to create the tag, if it already exists, it will fail and set the output to false
             try {
+              console.log("Creating tag for version ${{ needs.getversion.outputs.version }}")
               await github.rest.git.createRef({
                 owner: context.repo.owner,
                 repo: context.repo.repo,
