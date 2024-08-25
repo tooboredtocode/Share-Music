@@ -3,8 +3,8 @@
  *  All Rights Reserved
  */
 
-use hyper::Client;
 use hyper::client::HttpConnector;
+use hyper::Client;
 use hyper_rustls::{HttpsConnector, HttpsConnectorBuilder};
 
 use crate::Context;
@@ -19,7 +19,7 @@ impl Context {
                 .with_native_roots()
                 .https_or_http()
                 .enable_all_versions()
-                .wrap_connector(http_connector)
+                .wrap_connector(http_connector),
         )
     }
 }

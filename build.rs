@@ -23,25 +23,36 @@ fn main() {
 fn get_version() -> Option<String> {
     let rustc = env::var("RUSTC").unwrap_or("rustc".to_string());
 
-    let version_string = Command::new(rustc).arg("--version").output().ok()
+    let version_string = Command::new(rustc)
+        .arg("--version")
+        .output()
+        .ok()
         .and_then(|output| String::from_utf8(output.stdout).ok());
 
     if let Some(version_string) = version_string {
         let line = version_string.lines().last().unwrap_or(&version_string);
         let mut parts = line.trim().split(" ");
 
-        return parts.nth(1).map(|s| s.to_string())
+        return parts.nth(1).map(|s| s.to_string());
     }
 
     None
 }
 
 fn get_branch() -> Option<String> {
-    Command::new("git").arg("branch").arg("--show-current").output().ok()
+    Command::new("git")
+        .arg("branch")
+        .arg("--show-current")
+        .output()
+        .ok()
         .and_then(|output| String::from_utf8(output.stdout).ok())
 }
 
 fn get_revision() -> Option<String> {
-    Command::new("git").arg("rev-parse").arg("HEAD").output().ok()
+    Command::new("git")
+        .arg("rev-parse")
+        .arg("HEAD")
+        .output()
+        .ok()
         .and_then(|output| String::from_utf8(output.stdout).ok())
 }

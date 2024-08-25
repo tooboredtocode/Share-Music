@@ -12,13 +12,13 @@ use tokio::signal;
 use tracing::{error, info};
 
 use crate::context::state::ClusterState;
-use crate::TerminationFuture;
 use crate::util::StateUpdater;
+use crate::TerminationFuture;
 
 struct SignalListener {
     snd: StateUpdater,
-    fut: Pin<Box<dyn Future<Output=io::Result<()>> + Send>>,
-    term: TerminationFuture
+    fut: Pin<Box<dyn Future<Output = io::Result<()>> + Send>>,
+    term: TerminationFuture,
 }
 
 impl SignalListener {
@@ -26,7 +26,7 @@ impl SignalListener {
         Self {
             fut: Box::pin(signal::ctrl_c()),
             term: TerminationFuture::new(snd.subscribe()),
-            snd
+            snd,
         }
     }
 }
@@ -40,14 +40,14 @@ impl Future for SignalListener {
                 Ok(()) => {
                     info!("Received shutdown signal, terminating cluster!");
                     let _ = self.snd.send((ClusterState::Terminating, false));
-                },
+                }
                 Err(err) => {
                     error!(failed_with = err.to_string(), "An Exception occurred while waiting for the shutdown signal, shutting down!");
                     let _ = self.snd.send((ClusterState::Crashing, false));
                 }
             }
 
-            return Poll::Ready(())
+            return Poll::Ready(());
         }
 
         Pin::new(&mut self.term).poll(cx)

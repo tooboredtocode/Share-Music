@@ -4,18 +4,20 @@
  */
 
 use tracing::info;
-use twilight_http::Client;
 use twilight_http::client::InteractionClient;
+use twilight_http::Client;
 use twilight_model::channel::message::AllowedMentions;
-use twilight_model::id::Id;
 use twilight_model::id::marker::ApplicationMarker;
+use twilight_model::id::Id;
 
-use crate::{Config, ShareResult};
 use crate::context::Context;
 use crate::util::error::Expectable;
+use crate::{Config, ShareResult};
 
 impl Context {
-    pub(super) async fn discord_client_from_config(config: &Config) -> ShareResult<(Client, Id<ApplicationMarker>)> {
+    pub(super) async fn discord_client_from_config(
+        config: &Config,
+    ) -> ShareResult<(Client, Id<ApplicationMarker>)> {
         let builder = Client::builder()
             .token(config.discord.token.clone())
             .default_allowed_mentions(AllowedMentions::default());

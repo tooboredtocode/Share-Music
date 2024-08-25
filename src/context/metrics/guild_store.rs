@@ -11,20 +11,20 @@ use prometheus_client::encoding::EncodeLabelValue;
 use twilight_model::gateway::event::Event;
 use twilight_model::gateway::payload::incoming::{GuildCreate, GuildDelete, Ready};
 
-use crate::context::Ctx;
 use crate::context::metrics::GuildLabels;
+use crate::context::Ctx;
 
 #[derive(Copy, Clone, Debug, Hash, PartialEq, Eq, EncodeLabelValue)]
 pub enum GuildState {
     Available,
-    Unavailable
+    Unavailable,
 }
 
 impl From<bool> for GuildState {
     fn from(v: bool) -> Self {
         match v {
             true => GuildState::Unavailable,
-            false => GuildState::Available
+            false => GuildState::Available,
         }
     }
 }
@@ -52,12 +52,12 @@ impl GuildStore {
 
         let stats = match lock.get(&shard_id) {
             Some(m) => m,
-            None => return 0
+            None => return 0,
         };
 
         match matching {
             Some(s) => stats.iter().filter(|e| e.1 == &s).count() as u64,
-            None => stats.len() as u64
+            None => stats.len() as u64,
         }
     }
 
@@ -66,14 +66,15 @@ impl GuildStore {
             Event::Ready(ready) => self.register_ready(shard_id, ready.deref()),
             Event::GuildCreate(create) => self.register_create(shard_id, create.deref()),
             Event::GuildDelete(delete) => self.register_delete(shard_id, delete),
-            _ => return
+            _ => return,
         }
 
         for state in GuildState::iter() {
-            ctx.metrics.connected_guilds
+            ctx.metrics
+                .connected_guilds
                 .get_or_create(&GuildLabels {
                     shard: shard_id,
-                    state
+                    state,
                 })
                 .set(self.count(shard_id, Some(state)) as i64);
         }
@@ -81,9 +82,7 @@ impl GuildStore {
 
     fn register_ready(&self, shard_id: u64, ready: &Ready) {
         let mut lock = self.inner.write();
-        let shard_store = lock
-            .entry(shard_id)
-            .or_insert(Default::default());
+        let shard_store = lock.entry(shard_id).or_insert(Default::default());
 
         for guild in &ready.guilds {
             shard_store.insert(guild.id.get(), GuildState::Unavailable);
@@ -92,22 +91,18 @@ impl GuildStore {
 
     fn register_create(&self, shard_id: u64, create: &GuildCreate) {
         let mut lock = self.inner.write();
-        let shard_store = lock
-            .entry(shard_id)
-            .or_insert(Default::default());
+        let shard_store = lock.entry(shard_id).or_insert(Default::default());
 
         shard_store.insert(create.id.get(), GuildState::from(create.unavailable));
     }
 
     fn register_delete(&self, shard_id: u64, delete: &GuildDelete) {
         let mut lock = self.inner.write();
-        let shard_store = lock
-            .entry(shard_id)
-            .or_insert(Default::default());
+        let shard_store = lock.entry(shard_id).or_insert(Default::default());
 
         match delete.unavailable {
             true => shard_store.insert(delete.id.get(), GuildState::Unavailable),
-            false => shard_store.remove(&delete.id.get())
+            false => shard_store.remove(&delete.id.get()),
         };
     }
 }

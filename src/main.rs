@@ -11,18 +11,18 @@ use tracing::{error, info, warn};
 
 use crate::config::Config;
 use crate::constants::state_consts;
-use crate::context::Context;
 use crate::context::state::ClusterState;
-use crate::util::{setup_logger, ShareResult, StateListener, TerminationFuture};
+use crate::context::Context;
 use crate::util::event_poller::EventStreamPoller;
 use crate::util::signal::start_signal_listener;
+use crate::util::{setup_logger, ShareResult, StateListener, TerminationFuture};
 
-mod constants;
+mod commands;
 mod config;
-mod util;
+mod constants;
 mod context;
 mod handlers;
-mod commands;
+mod util;
 
 fn main() {
     let cfg = match Config::load() {

@@ -7,12 +7,12 @@ use std::collections::HashMap;
 
 use tracing::Metadata;
 use tracing_subscriber::filter::LevelFilter;
-use tracing_subscriber::Layer;
 use tracing_subscriber::layer::{Context, Filter, SubscriberExt};
 use tracing_subscriber::util::SubscriberInitExt;
+use tracing_subscriber::Layer;
 
-use crate::Config;
 use crate::config::logging::{Format, Options as LoggingOptions, Target};
+use crate::Config;
 
 pub fn setup(cfg: &Config) {
     match cfg.logging.format {
@@ -21,21 +21,17 @@ pub fn setup(cfg: &Config) {
                 .with(
                     tracing_subscriber::fmt::layer()
                         .json()
-                        .with_filter(CfgFilter::from(&cfg.logging))
+                        .with_filter(CfgFilter::from(&cfg.logging)),
                 )
                 .init();
         }
         Format::Ascii => {
             tracing_subscriber::registry()
-                .with(
-                    tracing_subscriber::fmt::layer()
-                        .with_filter(CfgFilter::from(&cfg.logging))
-                )
+                .with(tracing_subscriber::fmt::layer().with_filter(CfgFilter::from(&cfg.logging)))
                 .init();
         }
     }
 }
-
 
 struct CfgFilter {
     default_level: LevelFilter,
@@ -46,7 +42,7 @@ impl<S> Filter<S> for CfgFilter {
     fn enabled(&self, meta: &Metadata<'_>, _: &Context<'_, S>) -> bool {
         for (target, level) in &self.target_overrides {
             if meta.target().starts_with(target) {
-                return *meta.level() <= *level
+                return *meta.level() <= *level;
             }
         }
 
@@ -55,7 +51,11 @@ impl<S> Filter<S> for CfgFilter {
 }
 
 impl CfgFilter {
-    fn override_from_target(res: &mut Vec<(String, LevelFilter)>, prev: &String, target_map: &HashMap<String, Target>) {
+    fn override_from_target(
+        res: &mut Vec<(String, LevelFilter)>,
+        prev: &String,
+        target_map: &HashMap<String, Target>,
+    ) {
         let mut buffer = Vec::new();
         for (target, value) in target_map {
             match value {
@@ -63,11 +63,7 @@ impl CfgFilter {
                     buffer.push((format!("{prev}{target}"), LevelFilter::from(*level)))
                 }
                 Target::Target(t_map) => {
-                    Self::override_from_target(
-                        res,
-                        &format!("{prev}{target}::"),
-                        t_map
-                    )
+                    Self::override_from_target(res, &format!("{prev}{target}::"), t_map)
                 }
             }
         }
@@ -88,4 +84,3 @@ impl From<&LoggingOptions> for CfgFilter {
         }
     }
 }
-

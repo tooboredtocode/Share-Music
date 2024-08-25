@@ -9,7 +9,7 @@ use image::Rgb;
 pub struct RGBPixel {
     pub red: u8,
     pub green: u8,
-    pub blue: u8
+    pub blue: u8,
 }
 
 impl RGBPixel {
@@ -26,16 +26,11 @@ impl RGBPixel {
         let green = self.green as f32 / 255.0;
         let blue = self.blue as f32 / 255.0;
 
-        f32::sqrt((0.299 * (red * red))
-            + (0.587 * (green * green))
-            + (0.114 * (blue * blue))
-        )
+        f32::sqrt((0.299 * (red * red)) + (0.587 * (green * green)) + (0.114 * (blue * blue)))
     }
 
     pub fn to_hex(&self) -> u32 {
-        ((self.red as u32) << 16)
-            + ((self.green as u32) << 8)
-            + (self.blue as u32)
+        ((self.red as u32) << 16) + ((self.green as u32) << 8) + (self.blue as u32)
     }
 }
 
@@ -48,4 +43,3 @@ impl From<&Rgb<u8>> for RGBPixel {
         }
     }
 }
-

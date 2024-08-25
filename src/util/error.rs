@@ -9,17 +9,20 @@ use hyper::http;
 use tokio::task::JoinError;
 use tracing::{error, warn};
 use twilight_gateway::stream::StartRecommendedError;
-use twilight_http::Error as TwilightHttpErr;
 use twilight_http::response::DeserializeBodyError;
+use twilight_http::Error as TwilightHttpErr;
 
 use crate::commands::error::InvalidCommandInteraction;
-use crate::context::Ctx;
 use crate::context::state::ClusterState;
+use crate::context::Ctx;
 use crate::util::parser::ParsingError;
 
 pub struct ShutDown;
 
-pub trait Expectable<T> where Self: Sized {
+pub trait Expectable<T>
+where
+    Self: Sized,
+{
     fn expect_with(self, msg: &str) -> Result<T, ShutDown>;
 
     fn warn_with(self, msg: &str) -> Option<T>;
@@ -56,7 +59,7 @@ impl<T, E: BlanketImpl> Expectable<T> for Result<T, E> {
     fn expect_with(self, msg: &str) -> Result<T, ShutDown> {
         let err = match self {
             Ok(ok) => return Ok(ok),
-            Err(e) => e
+            Err(e) => e,
         };
 
         error!(failed_with = err.to_string(), "{}", msg);
@@ -67,7 +70,7 @@ impl<T, E: BlanketImpl> Expectable<T> for Result<T, E> {
     fn warn_with(self, msg: &str) -> Option<T> {
         let err = match self {
             Ok(ok) => return Some(ok),
-            Err(e) => e
+            Err(e) => e,
         };
 
         warn!(failed_with = err.to_string(), "{}", msg);

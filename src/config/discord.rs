@@ -9,5 +9,5 @@ use serde::Deserialize;
 pub struct Options {
     pub token: String,
     #[serde(default)]
-    pub debug_server: Vec<u64>
+    pub debug_server: Vec<u64>,
 }

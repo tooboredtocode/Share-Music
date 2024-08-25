@@ -13,8 +13,8 @@ use tracing::{instrument, Instrument};
 pub use api_type::*;
 pub use error::ApiErr;
 
-use crate::context::Ctx;
 use crate::context::metrics::ThirdPartyLabels;
+use crate::context::Ctx;
 use crate::util::parser;
 
 mod api_type;
@@ -22,9 +22,7 @@ mod error;
 
 #[derive(Clone, Debug, Eq, PartialEq)]
 enum OdesliEndpoints {
-    Links {
-        url: String
-    }
+    Links { url: String },
 }
 
 impl OdesliEndpoints {
@@ -32,14 +30,12 @@ impl OdesliEndpoints {
     const API_VERSION: &'static str = "v1-alpha.1";
 
     pub fn links(url: impl Into<String>) -> Self {
-        Self::Links {
-            url: url.into()
-        }
+        Self::Links { url: url.into() }
     }
 
     pub fn method(&self) -> Method {
         match self {
-            OdesliEndpoints::Links { .. } => Method::GET
+            OdesliEndpoints::Links { .. } => Method::GET,
         }
     }
 
@@ -49,7 +45,7 @@ impl OdesliEndpoints {
 
     pub fn metrics_uri(&self) -> String {
         match self {
-            OdesliEndpoints::Links { .. } => format!("{}/{}/links", Self::BASE, Self::API_VERSION)
+            OdesliEndpoints::Links { .. } => format!("{}/{}/links", Self::BASE, Self::API_VERSION),
         }
     }
 }
@@ -59,9 +55,7 @@ impl Display for OdesliEndpoints {
         write!(f, "{}/{}", Self::BASE, Self::API_VERSION)?;
 
         match self {
-            OdesliEndpoints::Links {
-                url
-            } => write!(f, "/links?url={}", url)
+            OdesliEndpoints::Links { url } => write!(f, "/links?url={}", url),
         }
     }
 }
@@ -76,17 +70,20 @@ pub async fn fetch_from_api(url: &String, context: &Ctx) -> Result<OdesliRespons
         .body(Body::empty())?;
 
     let now = Instant::now();
-    let resp = context.http_client
+    let resp = context
+        .http_client
         .request(req)
         .instrument(tracing::info_span!("http_request"))
         .await?;
     let diff = now.elapsed();
 
-    context.metrics.third_party_api
+    context
+        .metrics
+        .third_party_api
         .get_or_create(&ThirdPartyLabels {
             method: req_data.method().into(),
             url: Cow::from(req_data.metrics_uri()),
-            status: resp.status().into()
+            status: resp.status().into(),
         })
         .observe(diff.as_secs_f64());
 

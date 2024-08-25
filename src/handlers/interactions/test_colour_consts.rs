@@ -12,20 +12,16 @@ use twilight_util::builder::embed::{EmbedBuilder, ImageSource};
 use crate::commands::test_colour_consts::TestConstsCommandData;
 use crate::context::Ctx;
 use crate::util::colour::{get_dominant_colour, RGBPixel};
-use crate::util::EmptyResult;
 use crate::util::error::Expectable;
 use crate::util::interaction::{defer, get_options, respond_with};
+use crate::util::EmptyResult;
 
 pub async fn handle(inter: &Interaction, data: &CommandData, context: Ctx) {
     // use an inner function to make splitting the code easier
     let _ = handle_inner(inter, data, context).await;
 }
 
-#[instrument(
-    name = "test_colour_consts_command_handler",
-    level = "debug",
-    skip_all
-)]
+#[instrument(name = "test_colour_consts_command_handler", level = "debug", skip_all)]
 async fn handle_inner(inter: &Interaction, data: &CommandData, context: Ctx) -> EmptyResult<()> {
     debug!("Received Test Colour Const Command Interaction");
 
@@ -46,13 +42,15 @@ async fn handle_inner(inter: &Interaction, data: &CommandData, context: Ctx) -> 
     debug!("Fetching Dominant Colour of Image");
     let colour = get_dominant_colour(&options.url, &context, (&options).into()).await;
 
-    defer_future.await
+    defer_future
+        .await
         .warn_with("Failed to join the defer future")
         .ok_or(())??;
 
     let embed = build_embed(image_source, colour);
 
-    let r = context.interaction_client()
+    let r = context
+        .interaction_client()
         .create_followup(inter.token.as_str())
         .embeds(&[embed.build()])
         .expect("Somehow we built an invalid embed, this should never happen")
@@ -69,8 +67,7 @@ async fn handle_inner(inter: &Interaction, data: &CommandData, context: Ctx) -> 
 }
 
 fn build_embed(url: ImageSource, colour: Option<RGBPixel>) -> EmbedBuilder {
-    let mut embed = EmbedBuilder::new()
-        .image(url);
+    let mut embed = EmbedBuilder::new().image(url);
 
     if let Some(colour) = colour {
         embed = embed.color(colour.to_hex());

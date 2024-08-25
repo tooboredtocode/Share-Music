@@ -39,7 +39,7 @@ pub enum DiscordLocale {
     JAPANESE,
     CHINESE_TAIWAN,
     KOREAN,
-    NONE
+    NONE,
 }
 
 impl DiscordLocale {
@@ -134,7 +134,7 @@ impl From<&Option<String>> for DiscordLocale {
     fn from(o: &Option<String>) -> Self {
         match o {
             Some(s) => Self::from(s.as_str()),
-            None => Self::NONE
+            None => Self::NONE,
         }
     }
 }

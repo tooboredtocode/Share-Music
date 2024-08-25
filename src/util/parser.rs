@@ -11,8 +11,8 @@ use std::marker::PhantomData;
 use std::pin::Pin;
 use std::task::{Context, Poll};
 
-use hyper::{Body, body, Response};
 use hyper::body::Bytes;
+use hyper::{body, Body, Response};
 use image::{DynamicImage, ImageError};
 use serde::de::DeserializeOwned;
 use tracing::instrument;
@@ -21,15 +21,17 @@ use tracing::instrument;
 pub enum ParsingError {
     Chunking,
     DeserializingJson(serde_json::Error),
-    DeserializingImage(ImageError)
+    DeserializingImage(ImageError),
 }
 
 impl Display for ParsingError {
     fn fmt(&self, f: &mut Formatter<'_>) -> fmt::Result {
         match &self {
             Self::Chunking => write!(f, "failed to chunk response body"),
-            Self::DeserializingJson(err) => write!(f, "failed to deserialize response body: {}", err),
-            Self::DeserializingImage(err) => write!(f, "failed to deserialize image: {}", err)
+            Self::DeserializingJson(err) => {
+                write!(f, "failed to deserialize response body: {}", err)
+            }
+            Self::DeserializingImage(err) => write!(f, "failed to deserialize image: {}", err),
         }
     }
 }
@@ -37,7 +39,7 @@ impl Display for ParsingError {
 impl Error for ParsingError {}
 
 pub struct BytesFuture {
-    inner: Pin<Box<dyn Future<Output=Result<Bytes, ParsingError>> + Send + Sync + 'static>>,
+    inner: Pin<Box<dyn Future<Output = Result<Bytes, ParsingError>> + Send + Sync + 'static>>,
 }
 
 impl BytesFuture {
@@ -87,7 +89,7 @@ impl<T: DeserializeOwned + Unpin> Future for ParsingFuture<T> {
         match Pin::new(&mut self.future).poll(cx) {
             Poll::Ready(Ok(bytes)) => Poll::Ready(
                 serde_json::from_slice(&Bytes::from(bytes))
-                    .map_err(|source| ParsingError::DeserializingJson(source))
+                    .map_err(|source| ParsingError::DeserializingJson(source)),
             ),
             Poll::Ready(Err(source)) => Poll::Ready(Err(source)),
             Poll::Pending => Poll::Pending,
@@ -96,14 +98,12 @@ impl<T: DeserializeOwned + Unpin> Future for ParsingFuture<T> {
 }
 
 pub struct ImageFuture {
-    future: BytesFuture
+    future: BytesFuture,
 }
 
 impl ImageFuture {
     fn new(bytes: BytesFuture) -> Self {
-        Self {
-            future: bytes,
-        }
+        Self { future: bytes }
     }
 }
 
@@ -114,7 +114,7 @@ impl Future for ImageFuture {
         match Pin::new(&mut self.future).poll(cx) {
             Poll::Ready(Ok(bytes)) => Poll::Ready(
                 image::load_from_memory(&*bytes)
-                    .map_err(|source| ParsingError::DeserializingImage(source))
+                    .map_err(|source| ParsingError::DeserializingImage(source)),
             ),
             Poll::Ready(Err(source)) => Poll::Ready(Err(source)),
             Poll::Pending => Poll::Pending,

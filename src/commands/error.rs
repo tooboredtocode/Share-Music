@@ -12,13 +12,13 @@ use twilight_model::application::interaction::application_command::CommandOption
 #[derive(Debug)]
 pub enum InvalidCommandInteraction {
     MissingOption {
-        name: &'static str
+        name: &'static str,
     },
     InvalidOptionType {
         name: &'static str,
         expected: CommandOptionType,
-        got: CommandOptionValue
-    }
+        got: CommandOptionValue,
+    },
 }
 
 impl Display for InvalidCommandInteraction {
@@ -26,14 +26,20 @@ impl Display for InvalidCommandInteraction {
         write!(f, "Invalid Interaction Data: ")?;
 
         match self {
-            InvalidCommandInteraction::MissingOption {
-                name
-            } => write!(f, "Missing option: {}", name),
+            InvalidCommandInteraction::MissingOption { name } => {
+                write!(f, "Missing option: {}", name)
+            }
             InvalidCommandInteraction::InvalidOptionType {
                 name,
                 expected,
-                got
-            } => write!(f, "Invalid Option Type for {}: expected {}, got {}", name, expected.kind(), got.kind().kind())
+                got,
+            } => write!(
+                f,
+                "Invalid Option Type for {}: expected {}, got {}",
+                name,
+                expected.kind(),
+                got.kind().kind()
+            ),
         }
     }
 }

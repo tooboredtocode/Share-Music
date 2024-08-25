@@ -3,10 +3,11 @@
  *  All Rights Reserved
  */
 
-
 use tracing::debug;
 use twilight_model::application::command::{Command, CommandOptionType, CommandType};
-use twilight_model::application::interaction::application_command::{CommandData, CommandOptionValue};
+use twilight_model::application::interaction::application_command::{
+    CommandData, CommandOptionValue,
+};
 use twilight_util::builder::command::{CommandBuilder, StringBuilder};
 
 use crate::commands::error::InvalidCommandInteraction;
@@ -16,9 +17,10 @@ pub const URL_OPTION_NAME: &str = "url";
 
 fn url_option() -> StringBuilder {
     StringBuilder::new(URL_OPTION_NAME, "The Link for the Song/Album")
-        .description_localizations([
-            (DiscordLocale::GERMAN.to_str(), "Der Link von dem Song/Album")
-        ])
+        .description_localizations([(
+            DiscordLocale::GERMAN.to_str(),
+            "Der Link von dem Song/Album",
+        )])
         .autocomplete(false)
         .required(true)
 }
@@ -29,18 +31,19 @@ pub fn command() -> Command {
     CommandBuilder::new(
         COMMAND_NAME,
         "Share Music to all Platforms",
-        CommandType::ChatInput
+        CommandType::ChatInput,
     )
-        .description_localizations([
-            (DiscordLocale::GERMAN.to_str(), "Teile Musik von für alle Plattformen")
-        ])
-        .option(url_option())
-        .dm_permission(true)
-        .build()
+    .description_localizations([(
+        DiscordLocale::GERMAN.to_str(),
+        "Teile Musik von für alle Plattformen",
+    )])
+    .option(url_option())
+    .dm_permission(true)
+    .build()
 }
 
 pub struct ShareCommandData {
-    pub url: String
+    pub url: String,
 }
 
 impl TryFrom<&CommandData> for ShareCommandData {
@@ -58,7 +61,7 @@ impl TryFrom<&CommandData> for ShareCommandData {
                     return Err(InvalidCommandInteraction::InvalidOptionType {
                         name: URL_OPTION_NAME,
                         expected: CommandOptionType::String,
-                        got: other_type
+                        got: other_type,
                     })
                 }
                 _ => {}
@@ -66,15 +69,12 @@ impl TryFrom<&CommandData> for ShareCommandData {
         }
 
         let res = Self {
-            url: url_option.ok_or(
-                InvalidCommandInteraction::MissingOption { name: URL_OPTION_NAME }
-            )?
+            url: url_option.ok_or(InvalidCommandInteraction::MissingOption {
+                name: URL_OPTION_NAME,
+            })?,
         };
 
-        debug!(
-            url = res.url,
-            "Successfully parsed Share Command Data"
-        );
+        debug!(url = res.url, "Successfully parsed Share Command Data");
 
         Ok(res)
     }

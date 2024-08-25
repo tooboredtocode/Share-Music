@@ -15,7 +15,7 @@ pub struct Options {
     #[serde(default = "default_saturation_factor")]
     pub saturation_factor: f32,
     #[serde(default = "default_luminosity_factor")]
-    pub luminosity_factor: f32
+    pub luminosity_factor: f32,
 }
 
 impl Default for Options {
@@ -24,7 +24,7 @@ impl Default for Options {
             brightest_percent: default_brightest_percent(),
             percent_factor: default_percent_factor(),
             saturation_factor: default_saturation_factor(),
-            luminosity_factor: default_luminosity_factor()
+            luminosity_factor: default_luminosity_factor(),
         }
     }
 }

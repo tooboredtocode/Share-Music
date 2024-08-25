@@ -10,16 +10,16 @@ use prometheus_client::encoding::EncodeLabelValue;
 use tokio::sync::broadcast::error::RecvError;
 use tracing::info;
 
-use crate::Context;
 use crate::context::metrics::ClusterLabels;
 use crate::util::{StateListener, StateUpdater};
+use crate::Context;
 
 #[derive(Copy, Clone, Debug, Hash, PartialEq, Eq, EncodeLabelValue)]
 pub enum ClusterState {
     Starting,
     Running,
     Terminating,
-    Crashing
+    Crashing,
 }
 
 impl ClusterState {
@@ -28,15 +28,14 @@ impl ClusterState {
             Self::Starting => "Starting",
             Self::Running => "Running",
             Self::Terminating => "Terminating",
-            Self::Crashing => "Crashing"
+            Self::Crashing => "Crashing",
         }
     }
 
     pub fn is_terminating(&self) -> bool {
         match self {
-            Self::Terminating
-            | Self::Crashing => true,
-            _ => false
+            Self::Terminating | Self::Crashing => true,
+            _ => false,
         }
     }
 }
@@ -44,21 +43,25 @@ impl ClusterState {
 #[derive(Debug)]
 pub(super) struct State {
     data: RwLock<ClusterState>,
-    send: StateUpdater
+    send: StateUpdater,
 }
 
 impl State {
     pub(super) fn new(send: StateUpdater) -> State {
         Self {
             data: ClusterState::Starting.into(),
-            send
+            send,
         }
     }
 
     fn set_state(&self, new_state: ClusterState) {
         let mut state = self.data.write();
 
-        info!("Cluster state change: {} -> {}", state.name(), new_state.name());
+        info!(
+            "Cluster state change: {} -> {}",
+            state.name(),
+            new_state.name()
+        );
 
         *state = new_state.clone();
         let _ = self.send.send((new_state, true));
@@ -83,7 +86,7 @@ impl Context {
             loop {
                 match rcv.recv().await {
                     Err(RecvError::Closed) => break,
-                    Err(RecvError::Lagged(_)) => {},
+                    Err(RecvError::Lagged(_)) => {}
                     Ok((state, handled)) => {
                         let ret = state.is_terminating();
                         if !handled {
@@ -101,10 +104,9 @@ impl Context {
     /// Sets the state of the cluster and updates the metrics
     pub fn set_state(&self, new_state: ClusterState) {
         self.metrics.cluster_state.clear();
-        self.metrics.cluster_state
-            .get_or_create(&ClusterLabels {
-                state: new_state,
-            })
+        self.metrics
+            .cluster_state
+            .get_or_create(&ClusterLabels { state: new_state })
             .set(1);
 
         self.state.set_state(new_state)

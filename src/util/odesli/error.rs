@@ -16,7 +16,7 @@ pub enum ApiErr {
     BuildingResponse(http::Error),
     RequestFailed(hyper::Error),
     Non200Response(hyper::StatusCode),
-    InvalidResponse(ParsingError)
+    InvalidResponse(ParsingError),
 }
 
 impl From<http::Error> for ApiErr {

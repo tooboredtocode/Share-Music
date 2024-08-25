@@ -8,8 +8,8 @@ use std::fmt;
 use std::fmt::{Display, Formatter};
 use std::str::FromStr;
 
+use serde::de::{value, IntoDeserializer};
 use serde::{Deserialize, Deserializer};
-use serde::de::{IntoDeserializer, value};
 
 #[derive(Debug, Deserialize)]
 #[serde(rename_all = "camelCase")]
@@ -41,7 +41,7 @@ pub struct OdesliResponse {
     /// A collection of objects. Each key is a unique identifier for a streaming
     /// entity, and each value is an object that contains data for that entity,
     /// such as `title`, `artistName`, `thumbnailUrl`, etc.
-    pub entities_by_unique_id: HashMap<String, Entity>
+    pub entities_by_unique_id: HashMap<String, Entity>,
 }
 
 pub struct EntityData {
@@ -66,7 +66,8 @@ impl OdesliResponse {
 
     pub fn get_data(&self) -> EntityData {
         let mut curr_max = APIProvider::min_prio();
-        let max = self.entities_by_unique_id
+        let max = self
+            .entities_by_unique_id
             .iter()
             .map(|(id, e)| e.api_provider.prio(&self.entity_unique_id == id))
             .min()
@@ -75,11 +76,13 @@ impl OdesliResponse {
         let mut res = EntityData {
             title: None,
             artist_name: None,
-            thumbnail_url: None
+            thumbnail_url: None,
         };
 
         for (entity_id, entity) in &self.entities_by_unique_id {
-            let prio = entity.api_provider.prio(&self.entity_unique_id == entity_id);
+            let prio = entity
+                .api_provider
+                .prio(&self.entity_unique_id == entity_id);
 
             if prio < curr_max {
                 let Entity {
@@ -89,11 +92,14 @@ impl OdesliResponse {
                     ..
                 } = entity;
 
-                if [title, artist_name, thumbnail_url].iter().all(|i| i.is_some()) {
+                if [title, artist_name, thumbnail_url]
+                    .iter()
+                    .all(|i| i.is_some())
+                {
                     res = EntityData {
                         title: title.clone(),
                         artist_name: artist_name.clone(),
-                        thumbnail_url: thumbnail_url.clone()
+                        thumbnail_url: thumbnail_url.clone(),
                     }
                 } else {
                     continue;
@@ -126,7 +132,7 @@ pub struct Links {
 
     /// The native app URI that can be used on desktop devices to open this
     /// entity directly in the native app
-    pub native_app_uri_desktop: Option<String>
+    pub native_app_uri_desktop: Option<String>,
 }
 
 #[derive(Clone, Debug, Deserialize)]
@@ -152,14 +158,14 @@ pub struct Entity {
     /// from Apple Music will generally have a `platforms` array of
     /// `["appleMusic", "itunes"]` since both those platforms/links are derived
     /// from this single entity
-    pub platforms: Vec<Platform>
+    pub platforms: Vec<Platform>,
 }
 
 #[derive(Copy, Clone, Eq, PartialEq, Debug, Deserialize)]
 #[serde(rename_all = "lowercase")]
 pub enum Type {
     Song,
-    Album
+    Album,
 }
 
 #[derive(Clone, Eq, PartialEq, Debug, Hash, Deserialize)]
@@ -188,7 +194,7 @@ pub enum Platform {
     Audiomack,
     BoomPlay,
     #[serde(skip_deserializing)]
-    Other(String)
+    Other(String),
 }
 
 impl Display for Platform {
@@ -200,7 +206,7 @@ impl Display for Platform {
             Self::AmazonStore => write!(f, "Amazon Store"),
             Self::AmazonMusic => write!(f, "Amazon Music"),
             Self::Other(str) => write!(f, "{}", str),
-            other => write!(f, "{:?}", other)
+            other => write!(f, "{:?}", other),
         }
     }
 }
@@ -215,12 +221,11 @@ impl FromStr for Platform {
 
 impl<'de> Deserialize<'de> for Platform {
     fn deserialize<D>(deserializer: D) -> Result<Self, D::Error>
-    where D: Deserializer<'de>
+    where
+        D: Deserializer<'de>,
     {
         let s = String::deserialize(deserializer)?;
-        let deserialized = Self::from_str(&s).unwrap_or_else(|_| {
-            Self::Other(s)
-        });
+        let deserialized = Self::from_str(&s).unwrap_or_else(|_| Self::Other(s));
         Ok(deserialized)
     }
 }
@@ -247,7 +252,7 @@ pub enum APIProvider {
     BoomPlay,
     Anghami,
     #[serde(skip_deserializing)]
-    Other(String)
+    Other(String),
 }
 
 impl APIProvider {
@@ -257,7 +262,9 @@ impl APIProvider {
     }
 
     #[inline]
-    fn min_prio() -> usize { usize::MAX }
+    fn min_prio() -> usize {
+        usize::MAX
+    }
 
     fn prio(&self, is_orig_provider: bool) -> usize {
         match self {
@@ -268,7 +275,7 @@ impl APIProvider {
             APIProvider::Deezer => 4,
             APIProvider::Google => 5,
             _ if is_orig_provider => Self::min_prio() - 1,
-            _ => Self::min_prio()
+            _ => Self::min_prio(),
         }
     }
 }
@@ -277,7 +284,7 @@ impl Display for APIProvider {
     fn fmt(&self, f: &mut Formatter<'_>) -> fmt::Result {
         match self {
             Self::Other(str) => write!(f, "{}", str),
-            other => write!(f, "{:?}", other)
+            other => write!(f, "{:?}", other),
         }
     }
 }
@@ -292,12 +299,11 @@ impl FromStr for APIProvider {
 
 impl<'de> Deserialize<'de> for APIProvider {
     fn deserialize<D>(deserializer: D) -> Result<Self, D::Error>
-    where D: Deserializer<'de>
+    where
+        D: Deserializer<'de>,
     {
         let s = String::deserialize(deserializer)?;
-        let deserialized = Self::from_str(&s).unwrap_or_else(|_| {
-            Self::Other(s)
-        });
+        let deserialized = Self::from_str(&s).unwrap_or_else(|_| Self::Other(s));
         Ok(deserialized)
     }
 }

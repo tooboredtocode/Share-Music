@@ -13,7 +13,7 @@ pub struct PixelGroup {
     pub group_hsl: HSLPixel,
     pub group_luminosity: f32,
     pub count: u32,
-    pub pixels: HashMap<RGBPixel, u32>
+    pub pixels: HashMap<RGBPixel, u32>,
 }
 
 impl PixelGroup {
@@ -23,7 +23,7 @@ impl PixelGroup {
             group_hsl: group.into(),
             group,
             count: Default::default(),
-            pixels: Default::default()
+            pixels: Default::default(),
         }
     }
 
@@ -46,7 +46,7 @@ impl PixelGroup {
 }
 
 impl FromIterator<RGBPixel> for Vec<PixelGroup> {
-    fn from_iter<T: IntoIterator<Item=RGBPixel>>(iter: T) -> Self {
+    fn from_iter<T: IntoIterator<Item = RGBPixel>>(iter: T) -> Self {
         let mut res = HashMap::new();
 
         for pixel in iter {
@@ -59,9 +59,7 @@ impl FromIterator<RGBPixel> for Vec<PixelGroup> {
             *pixel_count += 1;
         }
 
-        let res: Vec<PixelGroup> = res.into_iter()
-            .map(|(_, g)| g)
-            .collect();
+        let res: Vec<PixelGroup> = res.into_iter().map(|(_, g)| g).collect();
 
         res
     }

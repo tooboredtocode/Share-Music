@@ -26,13 +26,13 @@ async fn wrapper(mut listener: StateListener) {
 
 #[must_use = "futures do nothing unless you `.await` or poll them"]
 pub struct TerminationFuture {
-    wrapper: Pin<Box<dyn Future<Output=()> + Send>>
+    wrapper: Pin<Box<dyn Future<Output = ()> + Send>>,
 }
 
 impl TerminationFuture {
     pub fn new(listener: StateListener) -> Self {
         Self {
-            wrapper: Box::pin(wrapper(listener))
+            wrapper: Box::pin(wrapper(listener)),
         }
     }
 }

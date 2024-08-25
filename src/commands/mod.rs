@@ -9,13 +9,13 @@ use tracing::warn;
 use twilight_model::id::Id;
 
 use crate::context::Ctx;
-use crate::ShareResult;
 use crate::util::error::Expectable;
+use crate::ShareResult;
 
-pub mod test_colour_consts;
+pub mod error;
 pub mod find_links;
 pub mod share;
-pub mod error;
+pub mod test_colour_consts;
 
 pub async fn sync_commands(ctx: &Ctx) -> ShareResult<()> {
     info!("Syncing commands");
@@ -39,7 +39,7 @@ async fn sync(ctx: &Ctx) -> ShareResult<()> {
                     share::command(),
                     find_links::command(),
                     test_colour_consts::command(),
-                ]
+                ],
             )
             .await
             .expect_with("Failed to Synchronize Commands")?;
@@ -51,21 +51,13 @@ async fn sync(ctx: &Ctx) -> ShareResult<()> {
 #[cfg(not(debug_assertions))]
 async fn sync(ctx: &Ctx) -> ShareResult<()> {
     ctx.interaction_client()
-        .set_global_commands(&[
-            share::command(),
-            find_links::command()
-        ])
+        .set_global_commands(&[share::command(), find_links::command()])
         .await
         .expect_with("Failed to Synchronize Commands")?;
 
     for debug_server in &ctx.cfg.debug_server {
         ctx.interaction_client()
-            .set_guild_commands(
-                Id::new(*debug_server),
-                &[
-                    test_colour_consts::command()
-                ]
-            )
+            .set_guild_commands(Id::new(*debug_server), &[test_colour_consts::command()])
             .await
             .expect_with("Failed to Synchronize Commands")?;
     }

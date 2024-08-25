@@ -7,8 +7,8 @@ use std::borrow::Cow;
 use std::time::Instant;
 
 use hyper::Body;
-use image::DynamicImage;
 use image::imageops::FilterType;
+use image::DynamicImage;
 use tracing::{debug, debug_span, instrument, Instrument};
 
 use hsl_pixel::HSLPixel;
@@ -16,14 +16,14 @@ use pixel_group::PixelGroup;
 pub use rgb_pixel::RGBPixel;
 
 use crate::constants::colour_consts;
-use crate::context::Ctx;
 use crate::context::metrics::{Method, ThirdPartyLabels};
+use crate::context::Ctx;
 use crate::util::error::Expectable;
 use crate::util::parser;
 
-mod rgb_pixel;
 mod hsl_pixel;
 mod pixel_group;
+mod rgb_pixel;
 
 #[derive(Copy, Clone, Debug, Default, PartialEq)]
 pub struct Options {
@@ -55,16 +55,17 @@ struct PopulatedOptions {
 }
 
 #[instrument(level = "debug", skip_all)]
-pub async fn get_dominant_colour(url: &String, context: &Ctx, options: Options) -> Option<RGBPixel> {
+pub async fn get_dominant_colour(
+    url: &String,
+    context: &Ctx,
+    options: Options,
+) -> Option<RGBPixel> {
     let options = options.populate(context);
 
     let img = fetch_image(url, context).await?;
 
     let num_pixels = img.height() * img.width();
-    let mut groups: Vec<PixelGroup> = img.to_rgb8()
-        .pixels()
-        .map(|i| RGBPixel::from(i))
-        .collect();
+    let mut groups: Vec<PixelGroup> = img.to_rgb8().pixels().map(|i| RGBPixel::from(i)).collect();
 
     groups = {
         let mut res = Vec::new();
@@ -78,18 +79,19 @@ pub async fn get_dominant_colour(url: &String, context: &Ctx, options: Options) 
             res.push(g);
 
             if count > options.brightest_percent {
-                break
+                break;
             }
         }
 
         res
     };
 
-    groups.iter()
-        .max_by(
-            |a, b|
-                a.dom_val(num_pixels, options).total_cmp(&b.dom_val(num_pixels, options))
-        )?
+    groups
+        .iter()
+        .max_by(|a, b| {
+            a.dom_val(num_pixels, options)
+                .total_cmp(&b.dom_val(num_pixels, options))
+        })?
         .most_common_colour()
 }
 
@@ -110,18 +112,21 @@ async fn fetch_image(url: &String, context: &Ctx) -> Option<DynamicImage> {
     );
 
     let now = Instant::now();
-    let resp = context.http_client
+    let resp = context
+        .http_client
         .request(req)
         .instrument(debug_span!("http_request"))
         .await
         .warn_with("Failed to fetch thumbnail")?;
     let diff = now.elapsed();
 
-    context.metrics.third_party_api
+    context
+        .metrics
+        .third_party_api
         .get_or_create(&ThirdPartyLabels {
             method: Method::GET,
             url: Cow::from(metrics_url),
-            status: resp.status().into()
+            status: resp.status().into(),
         })
         .observe(diff.as_secs_f64());
 
@@ -129,11 +134,13 @@ async fn fetch_image(url: &String, context: &Ctx) -> Option<DynamicImage> {
         .await
         .warn_with("Failed to parse image, url may have pointed to a file that wasn't an image")?;
 
-    if (colour_consts::MAX_IMAGE_SIZE < img.width()) | (colour_consts::MAX_IMAGE_SIZE < img.height()) {
+    if (colour_consts::MAX_IMAGE_SIZE < img.width())
+        | (colour_consts::MAX_IMAGE_SIZE < img.height())
+    {
         img = img.resize(
             colour_consts::MAX_IMAGE_SIZE,
             colour_consts::MAX_IMAGE_SIZE,
-            FilterType::Nearest
+            FilterType::Nearest,
         );
     }
 

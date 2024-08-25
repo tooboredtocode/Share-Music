@@ -3,7 +3,6 @@
  *  All Rights Reserved
  */
 
-
 use tracing::trace;
 use twilight_gateway::stream::ShardRef;
 use twilight_model::gateway::event::Event;
@@ -15,7 +14,9 @@ mod interactions;
 pub fn handle(shard: ShardRef, event: Event, context: &Ctx) {
     trace!("Shard: {}, Event: {:?}", shard.id().number(), event.kind());
 
-    context.metrics.update_cluster_metrics(shard, &event, &context);
+    context
+        .metrics
+        .update_cluster_metrics(shard, &event, &context);
 
     let ctx = context.clone();
     tokio::spawn(async move {

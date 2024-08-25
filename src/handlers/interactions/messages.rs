@@ -28,9 +28,7 @@ pub const fn no_links_found(locale: DiscordLocale) -> &'static str {
         DiscordLocale::GERMAN => {
             "Es konnten keine uns bekannten links in der Nachricht gefunden werden"
         }
-        _ => {
-            "Couldn't find any links in the message"
-        }
+        _ => "Couldn't find any links in the message",
     }
 }
 
@@ -40,8 +38,6 @@ pub const fn error(locale: DiscordLocale) -> &'static str {
         DiscordLocale::GERMAN => {
             "Ein unerwarteter Fehler ist passiert, die Developer wurden benachrichtigt"
         }
-        _ => {
-            "An unexpected error has occurred, the dev team has been alerted"
-        }
+        _ => "An unexpected error has occurred, the dev team has been alerted",
     }
 }

@@ -5,27 +5,27 @@
 
 use std::sync::Arc;
 
-use hyper::Client;
 use hyper::client::HttpConnector;
+use hyper::Client;
 use hyper_rustls::HttpsConnector;
 use tracing::info;
-use twilight_gateway::{Shard, stream, Config as ShardConfig};
+use twilight_gateway::{stream, Config as ShardConfig, Shard};
 use twilight_http::Client as TwilightClient;
-use twilight_model::id::Id;
 use twilight_model::id::marker::ApplicationMarker;
+use twilight_model::id::Id;
 
-use crate::{Config, ShareResult};
 use crate::config::colour::Options as ColourOptions;
 use crate::constants::cluster_consts;
 use crate::context::metrics::Metrics;
 use crate::context::state::State;
 use crate::util::error::Expectable;
 use crate::util::StateUpdater;
+use crate::{Config, ShareResult};
 
 mod discord_client;
-pub mod state;
-pub mod metrics;
 mod http_client;
+pub mod metrics;
+pub mod state;
 
 #[derive(Debug)]
 pub struct Context {
@@ -38,14 +38,13 @@ pub struct Context {
 
     pub metrics: Metrics,
     // TODO: add database for command invocation metrics
-
-    state: State
+    state: State,
 }
 
 #[derive(Debug)]
 pub struct SavedConfig {
     pub debug_server: Vec<u64>,
-    pub colour: ColourOptions
+    pub colour: ColourOptions,
 }
 
 pub type Ctx = Arc<Context>;
@@ -59,14 +58,15 @@ impl Context {
             &discord_client,
             ShardConfig::builder(
                 config.discord.token.clone(),
-                cluster_consts::GATEWAY_INTENTS
+                cluster_consts::GATEWAY_INTENTS,
             )
-                .presence(cluster_consts::presence())
-                .build(),
-            |_, builder| builder.build()
-        ).await
-            .expect_with("Failed to create recommended shards")?
-            .collect();
+            .presence(cluster_consts::presence())
+            .build(),
+            |_, builder| builder.build(),
+        )
+        .await
+        .expect_with("Failed to create recommended shards")?
+        .collect();
 
         let http_client = Self::create_http_client();
 
@@ -78,11 +78,12 @@ impl Context {
             http_client,
             cfg: SavedConfig {
                 debug_server: config.discord.debug_server.clone(),
-                colour: config.colour
+                colour: config.colour,
             },
             metrics,
-            state: State::new(snd)
-        }.into();
+            state: State::new(snd),
+        }
+        .into();
 
         ctx.start_state_listener();
         Ok((ctx, discord_shards))

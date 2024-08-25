@@ -3,16 +3,16 @@
  *  All Rights Reserved
  */
 
-use figment::{Error, Figment};
 use figment::providers::{Env, Format, Json, Yaml};
+use figment::{Error, Figment};
 use serde::Deserialize;
 
 use crate::constants::config_consts;
 
+pub mod colour;
 pub mod discord;
 pub mod logging;
 pub mod metrics;
-pub mod colour;
 
 #[derive(Clone, Debug, Deserialize)]
 pub struct Config {
@@ -22,7 +22,7 @@ pub struct Config {
     #[serde(default)]
     pub logging: logging::Options,
     #[serde(default)]
-    pub colour: colour::Options
+    pub colour: colour::Options,
 }
 
 impl Config {
@@ -35,7 +35,7 @@ impl Config {
                 // e.g. "discord_token" -> "discord.token"
                 match k.as_str().split_once("_") {
                     Some((r, l)) => format!("{}.{}", r, l).into(),
-                    None => k.into()
+                    None => k.into(),
                 }
             }))
             .extract()

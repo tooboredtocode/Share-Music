@@ -6,22 +6,25 @@
 use std::future::IntoFuture;
 use std::time::Duration;
 
-use lazy_regex::{Lazy, lazy_regex};
+use lazy_regex::{lazy_regex, Lazy};
 use regex::Regex;
 use tokio::time;
 use tracing::{debug, debug_span, Instrument};
 use twilight_model::application::interaction::Interaction;
-use twilight_util::builder::embed::{EmbedAuthorBuilder, EmbedBuilder, EmbedFooterBuilder, ImageSource};
+use twilight_util::builder::embed::{
+    EmbedAuthorBuilder, EmbedBuilder, EmbedFooterBuilder, ImageSource,
+};
 
 use crate::context::Ctx;
 use crate::handlers::interactions::messages;
-use crate::util::{EmptyResult, TerminationFuture};
 use crate::util::colour::{get_dominant_colour, RGBPixel};
 use crate::util::error::Expectable;
-use crate::util::odesli::{ApiErr, EntityData, fetch_from_api, OdesliResponse};
+use crate::util::odesli::{fetch_from_api, ApiErr, EntityData, OdesliResponse};
+use crate::util::{EmptyResult, TerminationFuture};
 
 // language=RegExp
-pub static VALID_LINKS_REGEX: Lazy<Regex> = lazy_regex!(r#"(?x)
+pub static VALID_LINKS_REGEX: Lazy<Regex> = lazy_regex!(
+    r#"(?x)
     (?:http|https)://
     .* # match all potential subdomains cause shit sucks
     (?:
@@ -37,17 +40,19 @@ pub static VALID_LINKS_REGEX: Lazy<Regex> = lazy_regex!(r#"(?x)
         play\.google\.com # Google Store
     )
     \S*
-"#);
+"#
+);
 
 pub async fn map_odesli_response(
     resp: Result<OdesliResponse, ApiErr>,
     context: &Ctx,
-    inter: &Interaction
+    inter: &Interaction,
 ) -> EmptyResult<OdesliResponse> {
     match resp.warn_with("Failed to get the data from the api") {
         Some(s) => Ok(s),
         None => {
-            match context.interaction_client()
+            match context
+                .interaction_client()
                 .create_followup(inter.token.as_str())
                 .content(messages::error((&inter.locale).into()))
                 .expect("Somehow the static string is too long, this should never happen")
@@ -59,7 +64,7 @@ pub async fn map_odesli_response(
                 Some(msg_resp) => {
                     let msg = match msg_resp.model().await {
                         Ok(ok) => ok,
-                        Err(_) => return Err(())
+                        Err(_) => return Err(()),
                     };
 
                     let ctx = context.clone();
@@ -67,8 +72,9 @@ pub async fn map_odesli_response(
                     tokio::spawn(async move {
                         let _ = time::timeout(
                             Duration::from_secs(15),
-                            TerminationFuture::new(ctx.create_state_listener())
-                        ).await;
+                            TerminationFuture::new(ctx.create_state_listener()),
+                        )
+                        .await;
 
                         ctx.discord_client
                             .delete_message(msg.channel_id, msg.id)
@@ -77,7 +83,7 @@ pub async fn map_odesli_response(
                             .await
                             .warn_with("Failed to delete Error Message")
                     });
-                },
+                }
                 None => {}
             }
 
@@ -86,7 +92,11 @@ pub async fn map_odesli_response(
     }
 }
 
-pub fn build_embed(data: &OdesliResponse, entity: EntityData, colour: Option<RGBPixel>) -> EmbedBuilder {
+pub fn build_embed(
+    data: &OdesliResponse,
+    entity: EntityData,
+    colour: Option<RGBPixel>,
+) -> EmbedBuilder {
     let mut embed = EmbedBuilder::new();
     let EntityData {
         title,
@@ -95,9 +105,7 @@ pub fn build_embed(data: &OdesliResponse, entity: EntityData, colour: Option<RGB
     } = entity;
 
     if let Some(title) = title {
-        embed = embed
-            .title(title)
-            .url(&data.page_url)
+        embed = embed.title(title).url(&data.page_url)
     }
 
     if let Some(artist_name) = artist_name {
@@ -120,23 +128,24 @@ pub fn build_embed(data: &OdesliResponse, entity: EntityData, colour: Option<RGB
     links.sort_by(|a, b| a.0.cmp(&b.0));
 
     embed = embed.description(
-        links.iter()
+        links
+            .iter()
             .map(|(platform, link)| format!("[{}]({})", platform, link))
             .collect::<Vec<String>>()
-            .join(" | ")
+            .join(" | "),
     );
 
     embed
 }
 
 // NOTE: This future is not instrumented as it should be instrumented in the calling function
-pub async fn embed_routine(url: &String, context: &Ctx, inter: &Interaction) -> EmptyResult<EmbedBuilder> {
+pub async fn embed_routine(
+    url: &String,
+    context: &Ctx,
+    inter: &Interaction,
+) -> EmptyResult<EmbedBuilder> {
     debug!("Fetching information from API");
-    let data = map_odesli_response(
-        fetch_from_api(url, context).await,
-        context,
-        inter
-    ).await?;
+    let data = map_odesli_response(fetch_from_api(url, context).await, context, inter).await?;
 
     let entity_data = data.get_data();
     debug!(
@@ -149,8 +158,8 @@ pub async fn embed_routine(url: &String, context: &Ctx, inter: &Interaction) -> 
         Some(url) => {
             debug!("Album/Song has a Thumbnail, getting dominant colour");
             get_dominant_colour(url, context, Default::default()).await
-        },
-        None => None
+        }
+        None => None,
     };
 
     Ok(build_embed(&data, entity_data, colour))

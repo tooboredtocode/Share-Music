@@ -22,7 +22,7 @@ pub struct Options {
 #[serde(rename_all = "lowercase")]
 pub enum Format {
     Json,
-    Ascii
+    Ascii,
 }
 
 impl Default for Format {
@@ -44,7 +44,7 @@ pub enum Level {
     #[serde(alias = "error", alias = "ERROR")]
     Error,
     #[serde(alias = "off", alias = "OFF")]
-    Off
+    Off,
 }
 
 impl Default for Level {
@@ -61,7 +61,7 @@ impl From<Level> for LevelFilter {
             Level::Info => Self::INFO,
             Level::Warn => Self::WARN,
             Level::Error => Self::ERROR,
-            Level::Off => Self::OFF
+            Level::Off => Self::OFF,
         }
     }
 }
@@ -70,5 +70,5 @@ impl From<Level> for LevelFilter {
 #[serde(untagged)]
 pub enum Target {
     Level(Level),
-    Target(HashMap<String, Self>)
+    Target(HashMap<String, Self>),
 }

@@ -9,13 +9,13 @@ use super::RGBPixel;
 pub struct HSLPixel {
     pub hue: f32,
     pub saturation: f32,
-    pub lightness: f32
+    pub lightness: f32,
 }
 
 enum RGB {
     Red,
     Green,
-    Blue
+    Blue,
 }
 
 impl RGB {
@@ -63,8 +63,8 @@ impl From<RGBPixel> for HSLPixel {
             return Self {
                 hue: 0.0,
                 saturation: 0.0,
-                lightness
-            }
+                lightness,
+            };
         }
 
         let delta = max_val - min_val;
@@ -85,12 +85,8 @@ impl From<RGBPixel> for HSLPixel {
 
                 res
             }
-            RGB::Green => {
-                ((blue - red) / delta) + 2.0
-            }
-            RGB::Blue => {
-                ((red - green) / delta) + 4.0
-            }
+            RGB::Green => ((blue - red) / delta) + 2.0,
+            RGB::Blue => ((red - green) / delta) + 4.0,
         };
 
         hue /= 6.0;
@@ -98,8 +94,7 @@ impl From<RGBPixel> for HSLPixel {
         Self {
             hue,
             saturation,
-            lightness
+            lightness,
         }
     }
 }
-
