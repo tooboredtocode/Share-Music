@@ -13,8 +13,7 @@ use twilight_http::response::DeserializeBodyError;
 use twilight_http::Error as TwilightHttpErr;
 
 use crate::commands::error::InvalidCommandInteraction;
-use crate::context::state::ClusterState;
-use crate::context::Ctx;
+use crate::context::{ClusterState, Ctx};
 use crate::util::parser::ParsingError;
 
 pub struct ShutDown;
@@ -30,7 +29,7 @@ where
     fn expect_with_state(self, msg: &str, ctx: &Ctx) -> Result<T, ShutDown> {
         let res = self.expect_with(msg);
         if res.is_err() {
-            ctx.set_state(ClusterState::Crashing);
+            ctx.state.set(ClusterState::Crashing);
         }
 
         res

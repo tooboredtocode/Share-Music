@@ -3,11 +3,9 @@
  *  All Rights Reserved
  */
 
-use tokio::sync::broadcast;
+use this_state::{State as ThisState, StateFuture};
 
-pub use termination_future::TerminationFuture;
-
-use crate::context::state::ClusterState;
+use crate::context::ClusterState;
 
 pub mod colour;
 pub mod discord_locales;
@@ -18,10 +16,12 @@ pub mod odesli;
 pub mod parser;
 pub mod setup_logger;
 pub mod signal;
-mod termination_future;
 
 pub type ShareResult<T> = Result<T, error::ShutDown>;
 pub type EmptyResult<T> = Result<T, ()>;
 
-pub type StateUpdater = broadcast::Sender<(ClusterState, bool)>;
-pub type StateListener = broadcast::Receiver<(ClusterState, bool)>;
+pub type TerminationFuture = StateFuture<ClusterState, fn(&ClusterState) -> bool>;
+
+pub fn create_termination_future(state: &ThisState<ClusterState>) -> TerminationFuture {
+    state.wait_for(ClusterState::is_terminating)
+}

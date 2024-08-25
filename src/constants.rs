@@ -38,10 +38,6 @@ pub mod cluster_consts {
     }
 }
 
-pub mod state_consts {
-    pub const QUEUE_LEN: usize = 5;
-}
-
 pub mod colour_consts {
     pub const MAX_IMAGE_SIZE: u32 = 4096;
 }

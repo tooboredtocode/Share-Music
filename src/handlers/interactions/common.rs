@@ -20,7 +20,7 @@ use crate::handlers::interactions::messages;
 use crate::util::colour::{get_dominant_colour, RGBPixel};
 use crate::util::error::Expectable;
 use crate::util::odesli::{fetch_from_api, ApiErr, EntityData, OdesliResponse};
-use crate::util::{EmptyResult, TerminationFuture};
+use crate::util::{create_termination_future, EmptyResult};
 
 // language=RegExp
 pub static VALID_LINKS_REGEX: Lazy<Regex> = lazy_regex!(
@@ -71,7 +71,7 @@ pub async fn map_odesli_response(
                 tokio::spawn(async move {
                     let _ = time::timeout(
                         Duration::from_secs(15),
-                        TerminationFuture::new(ctx.create_state_listener()),
+                        create_termination_future(&ctx.state),
                     )
                     .await;
 

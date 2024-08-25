@@ -8,6 +8,8 @@ use std::sync::Arc;
 use hyper::client::HttpConnector;
 use hyper::Client;
 use hyper_rustls::HttpsConnector;
+use prometheus_client::encoding::EncodeLabelValue;
+use this_state::State as ThisState;
 use tracing::info;
 use twilight_gateway::{stream, Config as ShardConfig, Shard};
 use twilight_http::Client as TwilightClient;
@@ -17,15 +19,36 @@ use twilight_model::id::Id;
 use crate::config::colour::Options as ColourOptions;
 use crate::constants::cluster_consts;
 use crate::context::metrics::Metrics;
-use crate::context::state::State;
 use crate::util::error::Expectable;
-use crate::util::StateUpdater;
+use crate::util::signal::start_signal_listener;
 use crate::{Config, ShareResult};
 
 mod discord_client;
 mod http_client;
 pub mod metrics;
-pub mod state;
+
+#[derive(Copy, Clone, Debug, Hash, PartialEq, Eq, EncodeLabelValue)]
+pub enum ClusterState {
+    Starting,
+    Running,
+    Terminating,
+    Crashing,
+}
+
+impl ClusterState {
+    pub fn name(&self) -> &str {
+        match self {
+            Self::Starting => "Starting",
+            Self::Running => "Running",
+            Self::Terminating => "Terminating",
+            Self::Crashing => "Crashing",
+        }
+    }
+
+    pub fn is_terminating(&self) -> bool {
+        matches!(self, Self::Terminating | Self::Crashing)
+    }
+}
 
 #[derive(Debug)]
 pub struct Context {
@@ -38,7 +61,7 @@ pub struct Context {
 
     pub metrics: Metrics,
     // TODO: add database for command invocation metrics
-    state: State,
+    pub state: ThisState<ClusterState>,
 }
 
 #[derive(Debug)]
@@ -50,8 +73,23 @@ pub struct SavedConfig {
 pub type Ctx = Arc<Context>;
 
 impl Context {
-    pub async fn new(config: &Config, snd: StateUpdater) -> ShareResult<(Arc<Self>, Vec<Shard>)> {
+    pub async fn new(config: &Config) -> ShareResult<(Arc<Self>, Vec<Shard>)> {
         info!("Creating Cluster");
+
+        let metrics = Metrics::new(0);
+
+        let cluster_state_metric = metrics.cluster_state.clone();
+        let state = ThisState::new_with_on_change(ClusterState::Starting, move |old, new| {
+            use metrics::ClusterLabels;
+
+            info!("Cluster state change: {} -> {}", old.name(), new.name());
+            cluster_state_metric.clear();
+            cluster_state_metric
+                .get_or_create(&ClusterLabels { state: *new })
+                .inc();
+        });
+
+        start_signal_listener(state.clone());
 
         let (discord_client, bot_id) = Self::discord_client_from_config(config).await?;
         let discord_shards = stream::create_recommended(
@@ -70,9 +108,7 @@ impl Context {
 
         let http_client = Self::create_http_client();
 
-        let metrics = Metrics::new(0);
-
-        let ctx: Arc<Self> = Context {
+        let ctx: Arc<_> = Context {
             discord_client,
             bot_id,
             http_client,
@@ -81,11 +117,10 @@ impl Context {
                 colour: config.colour,
             },
             metrics,
-            state: State::new(snd),
+            state,
         }
         .into();
 
-        ctx.start_state_listener();
         Ok((ctx, discord_shards))
     }
 }

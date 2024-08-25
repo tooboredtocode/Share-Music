@@ -6,16 +6,13 @@
 use std::time::Duration;
 
 use futures_util::stream::StreamExt;
-use tokio::sync::broadcast;
 use tracing::{error, info, warn};
 
 use crate::config::Config;
-use crate::constants::state_consts;
-use crate::context::state::ClusterState;
+use crate::context::ClusterState;
 use crate::context::Context;
 use crate::util::event_poller::EventStreamPoller;
-use crate::util::signal::start_signal_listener;
-use crate::util::{setup_logger, ShareResult, StateListener, TerminationFuture};
+use crate::util::{setup_logger, ShareResult};
 
 mod commands;
 mod config;
@@ -50,17 +47,13 @@ async fn async_main(cfg: Config) -> ShareResult<()> {
     setup_logger::setup(&cfg);
     info!("{} v{} initializing!", constants::NAME, constants::VERSION);
 
-    let (sender, _) = broadcast::channel(state_consts::QUEUE_LEN);
-
-    start_signal_listener(sender.clone());
-
-    let (context, mut shards) = Context::new(&cfg, sender).await?;
+    let (context, mut shards) = Context::new(&cfg).await?;
     context.start_metrics_server(&cfg);
     commands::sync_commands(&context).await?;
 
     info!("Cluster connecting to discord...");
-    let mut events = EventStreamPoller::new(&mut shards, context.create_state_listener());
-    context.set_state(ClusterState::Running);
+    let mut events = EventStreamPoller::new(shards.iter_mut(), &context.state);
+    context.state.set(ClusterState::Running);
 
     while let Some((shard_id, event)) = events.next().await {
         match event {
@@ -70,7 +63,7 @@ async fn async_main(cfg: Config) -> ShareResult<()> {
             }
             Err(err) => {
                 if err.is_fatal() {
-                    context.set_state(ClusterState::Crashing);
+                    context.state.set(ClusterState::Crashing);
                     error!("Fatal error occurred, shutting down: {}", err);
                     break;
                 } else {

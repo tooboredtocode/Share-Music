@@ -26,10 +26,10 @@ use twilight_model::gateway::event::Event;
 
 use crate::constants::{GIT_BRANCH, GIT_REVISION, NAME, RUST_VERSION, VERSION};
 use crate::context::metrics::guild_store::{GuildState, GuildStore};
-use crate::context::state::ClusterState;
-use crate::context::Ctx;
+use crate::context::{ClusterState, Ctx};
+use crate::util::create_termination_future;
 use crate::util::error::Expectable;
-use crate::{Config, Context, TerminationFuture};
+use crate::{Config, Context};
 
 mod guild_store;
 
@@ -283,8 +283,7 @@ impl Context {
         let addr: SocketAddr = ([0, 0, 0, 0], config.metrics.listen_port).into();
         let server = Server::bind(&addr).serve(make_svc);
 
-        let fut =
-            server.with_graceful_shutdown(TerminationFuture::new(self.create_state_listener()));
+        let fut = server.with_graceful_shutdown(create_termination_future(&self.state));
 
         info!("Starting Metrics Server");
         let ctx = self.clone();

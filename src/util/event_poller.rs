@@ -8,23 +8,28 @@ use std::pin::Pin;
 use std::task::{Context, Poll};
 
 use futures_util::Stream;
+use this_state::State as ThisState;
 use twilight_gateway::error::ReceiveMessageError;
 use twilight_gateway::stream::{ShardEventStream, ShardRef};
 use twilight_gateway::Shard;
 use twilight_model::gateway::event::Event;
 
-use crate::{StateListener, TerminationFuture};
+use crate::context::ClusterState;
+use crate::util::{create_termination_future, TerminationFuture};
 
 pub struct EventStreamPoller<'a> {
     event_stream: ShardEventStream<'a>,
-    term: TerminationFuture,
+    term: Pin<Box<TerminationFuture>>,
 }
 
 impl<'a> EventStreamPoller<'a> {
-    pub fn new(shards: &'a mut [Shard], listener: StateListener) -> Self {
+    pub fn new(
+        shards: impl Iterator<Item = &'a mut Shard>,
+        state: &ThisState<ClusterState>,
+    ) -> Self {
         Self {
-            event_stream: ShardEventStream::new(shards.iter_mut()),
-            term: TerminationFuture::new(listener),
+            event_stream: ShardEventStream::new(shards),
+            term: Box::pin(create_termination_future(state)),
         }
     }
 }

@@ -13,8 +13,7 @@ use twilight_model::http::interaction::{InteractionResponse, InteractionResponse
 use twilight_util::builder::InteractionResponseDataBuilder;
 
 use crate::commands::sync_commands;
-use crate::context::state::ClusterState;
-use crate::context::Ctx;
+use crate::context::{ClusterState, Ctx};
 use crate::util::error::Expectable;
 use crate::util::EmptyResult;
 
@@ -25,12 +24,12 @@ where
 {
     let res: T = match data
         .try_into()
-        .warn_with("Received Invalid Interaction data, resyncing commands")
+        .warn_with("Received Invalid Interaction data, re-syncing commands")
     {
         Some(s) => s,
         None => {
             if sync_commands(context).await.is_err() {
-                context.set_state(ClusterState::Crashing)
+                context.state.set(ClusterState::Crashing);
             }
             return Err(());
         }
