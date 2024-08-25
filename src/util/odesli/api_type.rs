@@ -7,7 +7,8 @@ use std::collections::HashMap;
 use std::fmt;
 use std::fmt::{Display, Formatter};
 
-use serde::{Deserialize, Serialize};
+use serde::{Deserialize, Deserializer, Serialize};
+use serde_json::Value;
 
 #[derive(Debug, Serialize, Deserialize)]
 #[serde(rename_all = "camelCase")]
@@ -137,6 +138,7 @@ pub struct Links {
 #[serde(rename_all = "camelCase")]
 pub struct Entity {
     /// This is the unique identifier on the streaming platform/API provider
+    #[serde(deserialize_with = "deserialize_potential_int_to_string")]
     pub id: String,
 
     #[serde(rename = "type")]
@@ -157,6 +159,19 @@ pub struct Entity {
     /// `["appleMusic", "itunes"]` since both those platforms/links are derived
     /// from this single entity
     pub platforms: Vec<Platform>,
+}
+
+// For some reason song_link returns bandcamp links as ids so aaaaaaaaa
+fn deserialize_potential_int_to_string<'de, D>(deserializer: D) -> Result<String, D::Error>
+where
+    D: Deserializer<'de>,
+{
+    let value = Value::deserialize(deserializer)?;
+    match value {
+        Value::Number(n) => Ok(n.to_string()),
+        Value::String(s) => Ok(s),
+        _ => Err(serde::de::Error::custom("expected number or string")),
+    }
 }
 
 #[derive(Copy, Clone, Eq, PartialEq, Debug, Serialize, Deserialize)]
