@@ -62,16 +62,19 @@ pub async fn validate_url(
     inter: &Interaction,
     context: &Ctx,
 ) -> EmptyResult<()> {
-    if !VALID_LINKS_REGEX.is_match(options.url.as_str()) {
-        debug!("URL is not valid, informing user");
-        respond_with(
-            inter,
-            context,
-            messages::invalid_url((&inter.locale).into()),
-        )
-        .await;
-        Err(())
-    } else {
-        Ok(())
+    match VALID_LINKS_REGEX.find(options.url.as_str()) {
+        Some(mat) if mat.len() == options.url.len() => {
+            Ok(())
+        }
+        _ => {
+            debug!("URL is not valid, informing user");
+            respond_with(
+                inter,
+                context,
+                messages::invalid_url((&inter.locale).into()),
+            )
+            .await;
+            Err(())
+        }
     }
 }
