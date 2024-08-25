@@ -62,10 +62,8 @@ pub async fn validate_url(
     inter: &Interaction,
     context: &Ctx,
 ) -> EmptyResult<()> {
-    match VALID_LINKS_REGEX.find(options.url.as_str()) {
-        Some(mat) if mat.len() == options.url.len() => {
-            Ok(())
-        }
+    let mat = match VALID_LINKS_REGEX.find(options.url.as_str()) {
+        Some(mat) if mat.len() == options.url.len() => mat,
         _ => {
             debug!("URL is not valid, informing user");
             respond_with(
@@ -74,7 +72,20 @@ pub async fn validate_url(
                 messages::invalid_url((&inter.locale).into()),
             )
             .await;
-            Err(())
+            return Err(())
         }
+    };
+    
+    if mat.as_str().contains("/playlist") {
+        debug!("URL is a playlist, informing user");
+        respond_with(
+            inter,
+            context,
+            messages::playlist_not_supported((&inter.locale).into()),
+        )
+        .await;
+        return Err(())
     }
+    
+    Ok(())
 }

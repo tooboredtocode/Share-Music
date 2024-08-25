@@ -23,6 +23,22 @@ pub const fn invalid_url(locale: DiscordLocale) -> &'static str {
 }
 
 #[inline]
+pub const fn playlist_not_supported(locale: DiscordLocale) -> &'static str {
+    match locale {
+        DiscordLocale::German => {
+            "Es sieht so aus, als würdest du versuchen, eine Playlist zu teilen. Leider unterstütze ich diese nicht.\n\
+            Bitte teile stattdessen einen einzelnen Song oder ein Album\n\
+            -# Wenn du denkst, dass dies ein Fehler ist, öffne einen Report [hier](<https://github.com/tooboredtocode/Share-Music/issues>)"
+        }
+        _ => {
+            "It looks like you're trying to share a playlist. Unfortunately, I don't support those.\n\
+            Please share a single song or album instead\n\
+            -# If you think this is a mistake, open an issue [here](<https://github.com/tooboredtocode/Share-Music/issues>)"
+        }
+    }
+}
+
+#[inline]
 pub const fn no_links_found(locale: DiscordLocale) -> &'static str {
     match locale {
         DiscordLocale::German => {
