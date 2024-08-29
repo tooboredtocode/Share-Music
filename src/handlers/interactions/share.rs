@@ -10,7 +10,9 @@ use twilight_model::application::interaction::Interaction;
 
 use crate::commands::share::ShareCommandData;
 use crate::context::Ctx;
-use crate::handlers::interactions::common::VALID_LINKS_REGEX;
+use crate::handlers::interactions::common::{
+    additional_link_validation, InvalidLink, VALID_LINKS_REGEX,
+};
 use crate::handlers::interactions::{common, messages};
 use crate::util::error::Expectable;
 use crate::util::interaction::{defer, get_options, respond_with};
@@ -72,20 +74,42 @@ pub async fn validate_url(
                 messages::invalid_url((&inter.locale).into()),
             )
             .await;
-            return Err(())
+            return Err(());
         }
     };
-    
-    if mat.as_str().contains("/playlist") {
-        debug!("URL is a playlist, informing user");
-        respond_with(
-            inter,
-            context,
-            messages::playlist_not_supported((&inter.locale).into()),
-        )
-        .await;
-        return Err(())
+
+    if let Err(reason) = additional_link_validation(mat.as_str()) {
+        match reason {
+            InvalidLink::Playlist => {
+                debug!("URL is a playlist, informing user");
+                respond_with(
+                    inter,
+                    context,
+                    messages::playlist_not_supported((&inter.locale).into()),
+                )
+                .await;
+            }
+            InvalidLink::Artist => {
+                debug!("URL is an artist, informing user");
+                respond_with(
+                    inter,
+                    context,
+                    messages::artist_not_supported((&inter.locale).into()),
+                )
+                .await;
+            }
+            InvalidLink::YoutubeShort => {
+                debug!("URL is a shorts video, informing user");
+                respond_with(
+                    inter,
+                    context,
+                    messages::youtube_shorts_not_supported((&inter.locale).into()),
+                )
+                .await;
+            }
+        }
+        return Err(());
     }
-    
+
     Ok(())
 }

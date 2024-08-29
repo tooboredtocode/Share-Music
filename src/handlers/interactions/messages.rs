@@ -26,15 +26,37 @@ pub const fn invalid_url(locale: DiscordLocale) -> &'static str {
 pub const fn playlist_not_supported(locale: DiscordLocale) -> &'static str {
     match locale {
         DiscordLocale::German => {
-            "Es sieht so aus, als würdest du versuchen, eine Playlist zu teilen. Leider unterstütze ich diese nicht.\n\
-            Bitte teile stattdessen einen einzelnen Song oder ein Album\n\
+            "Leider unterstütze ich keine Playlists, bitte teile einen einzelnen Song oder ein Album\n\
             -# Wenn du denkst, dass dies ein Fehler ist, öffne einen Report [hier](<https://github.com/tooboredtocode/Share-Music/issues>)"
         }
         _ => {
-            "It looks like you're trying to share a playlist. Unfortunately, I don't support those.\n\
-            Please share a single song or album instead\n\
+            "Unfortunately playlists are not supported, please share a single song or album instead\n\
             -# If you think this is a mistake, open an issue [here](<https://github.com/tooboredtocode/Share-Music/issues>)"
         }
+    }
+}
+
+#[inline]
+pub const fn artist_not_supported(locale: DiscordLocale) -> &'static str {
+    match locale {
+        DiscordLocale::German => {
+            "Leider unterstütze ich keine Künstler Links, bitte teile einen einzelnen Song oder ein Album\n\
+            -# Wenn du denkst, dass dies ein Fehler ist, öffne einen Report [hier](<https://github.com/tooboredtocode/Share-Music/issues>)"
+        }
+        _ => {
+            "Unfortunately artist links are not supported, please share a single song or album instead\n\
+            -# If you think this is a mistake, open an issue [here](<https://github.com/tooboredtocode/Share-Music/issues>)"
+        }
+    }
+}
+
+#[inline]
+pub const fn youtube_shorts_not_supported(locale: DiscordLocale) -> &'static str {
+    match locale {
+        DiscordLocale::German => {
+            "Leider unterstütze ich keine YouTube Shorts, bitte teile einen einzelnen Song oder ein Album"
+        }
+        _ => "Unfortunately, I don't support YouTube Shorts, please share a single song or album instead"
     }
 }
 

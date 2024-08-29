@@ -11,7 +11,9 @@ use twilight_model::application::interaction::application_command::CommandData;
 use twilight_model::application::interaction::Interaction;
 
 use crate::context::Ctx;
-use crate::handlers::interactions::common::{embed_routine, VALID_LINKS_REGEX};
+use crate::handlers::interactions::common::{
+    additional_link_validation, embed_routine, VALID_LINKS_REGEX,
+};
 use crate::handlers::interactions::messages::no_links_found;
 use crate::util::error::Expectable;
 use crate::util::interaction::{defer, get_message, respond_with};
@@ -31,8 +33,9 @@ async fn handle_inner(inter: &Interaction, data: &CommandData, context: Ctx) -> 
     let links: Vec<String> = VALID_LINKS_REGEX
         .find_iter(msg.content.as_str())
         .take(10)
-        .map(|mat| mat.as_str().to_string())
+        .map(|m| m.as_str().to_string())
         .unique()
+        .filter(|s| additional_link_validation(s).is_ok())
         .take(5)
         .collect();
 

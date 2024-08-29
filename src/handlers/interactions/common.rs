@@ -43,6 +43,34 @@ pub static VALID_LINKS_REGEX: Lazy<Regex> = lazy_regex!(
 "#
 );
 
+/// The following enum contains all the possible ways a link can be invalid, but still pass the
+/// above regex.
+///
+/// Using manual checks is easier and much easier to understand, than adjusting the regex to filter
+/// out those cases
+#[derive(Debug)]
+pub enum InvalidLink {
+    Playlist,
+    Artist,
+    YoutubeShort,
+}
+
+pub fn additional_link_validation(link: &str) -> Result<(), InvalidLink> {
+    if link.contains("/playlist") {
+        return Err(InvalidLink::Playlist);
+    }
+
+    if link.contains("/artist") {
+        return Err(InvalidLink::Artist);
+    }
+
+    if link.contains("youtube.com/shorts") {
+        return Err(InvalidLink::YoutubeShort);
+    }
+
+    Ok(())
+}
+
 pub async fn map_odesli_response(
     resp: Result<OdesliResponse, ApiErr>,
     context: &Ctx,
