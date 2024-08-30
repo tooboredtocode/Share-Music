@@ -1662,7 +1662,7 @@ dependencies = [
 
 [[package]]
 name = "share-music"
-version = "3.5.0"
+version = "3.5.1"
 dependencies = [
  "figment",
  "futures-util",
