@@ -9,7 +9,7 @@ build = "build.rs"
 figment = { version = "0.10", features = ["env", "json", "yaml"] }
 futures-util = { default-features = false, version = "0.3" }
 # fixme: hyper 1.0 removed the client, consider using reqwest instead once they switch to hyper 1.0
-hyper = { version = "0.14", features = ["server", "http1", "http2"] }
+hyper = { version = "1.4", features = ["server", "http1", "http2"] }
 hyper-rustls = { version = "0.24", features = ["http1", "http2"] }
 image = "0.25"
 itertools = "0.13"
