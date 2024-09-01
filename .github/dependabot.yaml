@@ -1,0 +1,14 @@
+version: 2
+updates:
+  - package-ecosystem: "cargo"
+    directory: "/"
+    schedule:
+      interval: "weekly"
+    # Group all dependency updates into one PR
+    groups:
+      twilight:
+        patterns:
+          - "twilight*"
+      tracing:
+        patterns:
+          - "tracing*"
