@@ -2041,7 +2041,7 @@ dependencies = [
 
 [[package]]
 name = "share-music"
-version = "3.5.2"
+version = "3.5.3"
 dependencies = [
  "axum",
  "figment",
