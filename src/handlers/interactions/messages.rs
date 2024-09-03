@@ -74,8 +74,10 @@ pub const fn no_links_found(locale: DiscordLocale) -> &'static str {
 pub const fn error(locale: DiscordLocale) -> &'static str {
     match locale {
         DiscordLocale::German => {
-            "Ein unerwarteter Fehler ist passiert, die Developer wurden benachrichtigt"
+            "Ein unerwarteter Fehler ist aufgetreten, wenn du sicher bist, dass du einen gültigen Link geteilt hast, versuche es später erneut\n\
+            -# Wenn das Problem weiterhin besteht, öffne einen Report [hier](<https://github.com/tooboredtocode/Share-Music/issues>)"
         }
-        _ => "An unexpected error has occurred, the dev team has been alerted",
+        _ => "An unexpected error occurred, if you are sure you shared a valid link, please try again later\n\
+             -# If the issue persists, open an issue [here](<https://github.com/tooboredtocode/Share-Music/issues>)"
     }
 }
