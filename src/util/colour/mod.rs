@@ -3,13 +3,12 @@
  *  All Rights Reserved
  */
 
-use std::borrow::Cow;
-use std::time::Instant;
-
-use hyper::Body;
 use image::imageops::FilterType;
 use image::DynamicImage;
+use std::borrow::Cow;
+use std::time::Instant;
 use tracing::{debug, debug_span, instrument, Instrument};
+use url::Host;
 
 use hsl_pixel::HslPixel;
 use pixel_group::PixelGroup;
@@ -19,7 +18,6 @@ use crate::constants::colour_consts;
 use crate::context::metrics::{Method, ThirdPartyLabels};
 use crate::context::Ctx;
 use crate::util::error::Expectable;
-use crate::util::parser;
 
 mod hsl_pixel;
 mod pixel_group;
@@ -99,22 +97,22 @@ pub async fn get_dominant_colour(
 async fn fetch_image(url: &String, context: &Ctx) -> Option<DynamicImage> {
     debug!(url, "Fetching image");
 
-    let req = hyper::Request::builder()
-        .method("GET")
-        .uri(url)
-        .body(Body::empty())
+    let req = context
+        .http_client
+        .get(url)
+        .build()
         .warn_with("Failed to build thumbnail request")?;
 
     let metrics_url = format!(
         "{}://{}",
-        req.uri().scheme_str().unwrap_or("http"),
-        req.uri().host().unwrap_or("unknown.host")
+        req.url().scheme(),
+        req.url().host().unwrap_or(Host::Domain("unknown.host"))
     );
 
     let now = Instant::now();
     let resp = context
         .http_client
-        .request(req)
+        .execute(req)
         .instrument(debug_span!("http_request"))
         .await
         .warn_with("Failed to fetch thumbnail")?;
@@ -130,8 +128,12 @@ async fn fetch_image(url: &String, context: &Ctx) -> Option<DynamicImage> {
         })
         .observe(diff.as_secs_f64());
 
-    let mut img = parser::parse_image(resp)
+    const EMPTY: &[u8] = &[];
+    let bytes = resp
+        .bytes()
         .await
+        .warn_with("Failed to read thumbnail bytes");
+    let mut img = image::load_from_memory(bytes.as_deref().unwrap_or(EMPTY))
         .warn_with("Failed to parse image, url may have pointed to a file that wasn't an image")?;
 
     if (colour_consts::MAX_IMAGE_SIZE < img.width())

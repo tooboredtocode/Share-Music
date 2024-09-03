@@ -5,10 +5,8 @@
 
 use std::sync::Arc;
 
-use hyper::client::HttpConnector;
-use hyper::Client;
-use hyper_rustls::HttpsConnector;
 use prometheus_client::encoding::EncodeLabelValue;
+use reqwest::Client;
 use this_state::State as ThisState;
 use tracing::info;
 use twilight_gateway::{stream, Config as ShardConfig, Shard};
@@ -55,7 +53,7 @@ pub struct Context {
     pub discord_client: TwilightClient,
     bot_id: Id<ApplicationMarker>,
 
-    pub http_client: Client<HttpsConnector<HttpConnector>>,
+    pub http_client: Client,
 
     pub cfg: SavedConfig,
 
@@ -106,7 +104,7 @@ impl Context {
         .expect_with("Failed to create recommended shards")?
         .collect();
 
-        let http_client = Self::create_http_client();
+        let http_client = Self::create_http_client()?;
 
         let ctx: Arc<_> = Context {
             discord_client,

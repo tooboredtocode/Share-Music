@@ -48,7 +48,7 @@ async fn async_main(cfg: Config) -> ShareResult<()> {
     info!("{} v{} initializing!", constants::NAME, constants::VERSION);
 
     let (context, mut shards) = Context::new(&cfg).await?;
-    context.start_metrics_server(&cfg);
+    context.start_metrics_server(&cfg).await?;
     commands::sync_commands(&context).await?;
 
     info!("Cluster connecting to discord...");

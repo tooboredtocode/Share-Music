@@ -6,6 +6,8 @@
 pub const NAME: &str = "ShareMusic";
 pub const NAME_SHORT: &str = "Sharing";
 
+pub const USER_AGENT: &str = concat!("share-music-bot/", env!("CARGO_PKG_VERSION"));
+
 pub const VERSION: &str = env!("CARGO_PKG_VERSION");
 pub const RUST_VERSION: &str = env!("BUILD_RUSTC_VERSION");
 pub const GIT_BRANCH: &str = env!("BUILD_GIT_BRANCH");

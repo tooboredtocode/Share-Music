@@ -13,7 +13,6 @@ pub mod error;
 pub mod event_poller;
 pub mod interaction;
 pub mod odesli;
-pub mod parser;
 pub mod setup_logger;
 pub mod signal;
 

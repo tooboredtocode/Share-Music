@@ -3,23 +3,20 @@
  *  All Rights Reserved
  */
 
-use std::borrow::Cow;
-use std::collections::HashMap;
-use std::convert::Infallible;
-use std::fmt;
-use std::net::SocketAddr;
-use std::sync::atomic::AtomicU64;
-use std::sync::Arc;
-
-use hyper::service::{make_service_fn, service_fn};
-use hyper::{Body, Response, Server};
+use axum::extract::State as AxumState;
+use axum::http::{Method as HttpMethod, StatusCode};
 use parking_lot::Mutex;
-use prometheus_client::encoding::{text::encode, EncodeLabelSet, EncodeLabelValue};
+use prometheus_client::encoding::{EncodeLabelSet, EncodeLabelValue};
 use prometheus_client::metrics::{
     counter::Counter, family::Family, gauge::Gauge, histogram::Histogram,
 };
 use prometheus_client::registry::{Registry, Unit};
-use tracing::info;
+use std::borrow::Cow;
+use std::collections::HashMap;
+use std::net::SocketAddr;
+use std::sync::atomic::AtomicU64;
+use std::sync::Arc;
+use tracing::{info, warn};
 use twilight_gateway::stream::ShardRef;
 use twilight_gateway::ConnectionStatus;
 use twilight_model::gateway::event::Event;
@@ -27,8 +24,8 @@ use twilight_model::gateway::event::Event;
 use crate::constants::{GIT_BRANCH, GIT_REVISION, NAME, RUST_VERSION, VERSION};
 use crate::context::metrics::guild_store::{GuildState, GuildStore};
 use crate::context::{ClusterState, Ctx};
-use crate::util::create_termination_future;
 use crate::util::error::Expectable;
+use crate::util::{create_termination_future, ShareResult};
 use crate::{Config, Context};
 
 mod guild_store;
@@ -107,19 +104,19 @@ pub enum Method {
     TRACE,
 }
 
-impl From<hyper::Method> for Method {
-    fn from(value: hyper::Method) -> Self {
+impl From<reqwest::Method> for Method {
+    fn from(value: reqwest::Method) -> Self {
         match value {
-            hyper::Method::GET => Self::GET,
-            hyper::Method::POST => Self::POST,
-            hyper::Method::PUT => Self::PUT,
-            hyper::Method::DELETE => Self::DELETE,
-            hyper::Method::HEAD => Self::HEAD,
-            hyper::Method::OPTIONS => Self::OPTIONS,
-            hyper::Method::CONNECT => Self::CONNECT,
-            hyper::Method::PATCH => Self::PATCH,
-            hyper::Method::TRACE => Self::TRACE,
-            _ => panic!("Unknown method"),
+            reqwest::Method::GET => Self::GET,
+            reqwest::Method::POST => Self::POST,
+            reqwest::Method::PUT => Self::PUT,
+            reqwest::Method::DELETE => Self::DELETE,
+            reqwest::Method::HEAD => Self::HEAD,
+            reqwest::Method::OPTIONS => Self::OPTIONS,
+            reqwest::Method::CONNECT => Self::CONNECT,
+            reqwest::Method::PATCH => Self::PATCH,
+            reqwest::Method::TRACE => Self::TRACE,
+            _ => panic!("Unknown method: {:?}", value),
         }
     }
 }
@@ -263,30 +260,54 @@ fn shard_status_to_string(status: &ConnectionStatus) -> String {
     .to_string()
 }
 
-impl Context {
-    async fn metrics_handler(self: Arc<Self>) -> Result<Response<Body>, fmt::Error> {
-        let mut buffer = String::new();
-        encode(&mut buffer, &self.metrics.registry)?;
-        Ok(Response::new(Body::from(buffer)))
+async fn metrics_handler(
+    AxumState(context): AxumState<Arc<Context>>,
+    method: HttpMethod,
+) -> (StatusCode, String) {
+    use prometheus_client::encoding::text::encode;
+
+    if method != HttpMethod::GET {
+        return (
+            StatusCode::METHOD_NOT_ALLOWED,
+            String::from("Method not allowed"),
+        );
     }
 
-    pub fn start_metrics_server(self: &Arc<Self>, config: &Config) {
-        let context = self.clone();
-        let make_svc = make_service_fn(move |_conn| {
-            let ctx = context.clone();
+    let mut buffer = String::new();
+    match encode(&mut buffer, &context.metrics.registry) {
+        Ok(()) => (StatusCode::OK, buffer),
+        Err(e) => {
+            warn!("Failed to encode metrics: {}", e);
+            (
+                StatusCode::INTERNAL_SERVER_ERROR,
+                format!("Failed to encode metrics: {}", e),
+            )
+        }
+    }
+}
 
-            let service = service_fn(move |_| ctx.clone().metrics_handler());
+impl Context {
+    pub async fn start_metrics_server(self: &Arc<Self>, config: &Config) -> ShareResult<()> {
+        use axum::handler::Handler;
 
-            async move { Ok::<_, Infallible>(service) }
-        });
+        let app = metrics_handler.with_state(self.clone());
 
         let addr: SocketAddr = ([0, 0, 0, 0], config.metrics.listen_port).into();
-        let server = Server::bind(&addr).serve(make_svc);
+        let listener = tokio::net::TcpListener::bind(addr)
+            .await
+            .expect_with("Failed to bind to metrics address")?;
 
-        let fut = server.with_graceful_shutdown(create_termination_future(&self.state));
+        let state = self.clone();
+        let termination_future = create_termination_future(&self.state);
 
         info!("Starting Metrics Server");
-        let ctx = self.clone();
-        tokio::spawn(async move { fut.await.expect_with_state("Metrics server crashed", &ctx) });
+        tokio::spawn(async move {
+            axum::serve(listener, app)
+                .with_graceful_shutdown(termination_future)
+                .await
+                .expect_with_state("Metrics server crashed", &state)
+        });
+
+        Ok(())
     }
 }

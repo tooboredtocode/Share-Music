@@ -2,24 +2,20 @@
  *  Copyright (c) 2021-2022 tooboredtocode
  *  All Rights Reserved
  */
+use reqwest::Client;
+use std::time::Duration;
 
-use hyper::client::HttpConnector;
-use hyper::Client;
-use hyper_rustls::{HttpsConnector, HttpsConnectorBuilder};
-
+use crate::util::error::Expectable;
+use crate::util::ShareResult;
 use crate::Context;
 
 impl Context {
-    pub(super) fn create_http_client() -> Client<HttpsConnector<HttpConnector>> {
-        let mut http_connector = HttpConnector::new();
-        http_connector.enforce_http(false);
-
-        Client::builder().build(
-            HttpsConnectorBuilder::new()
-                .with_native_roots()
-                .https_or_http()
-                .enable_all_versions()
-                .wrap_connector(http_connector),
-        )
+    pub(super) fn create_http_client() -> ShareResult<Client> {
+        Client::builder()
+            .user_agent(crate::constants::USER_AGENT)
+            .redirect(reqwest::redirect::Policy::none())
+            .timeout(Duration::from_secs(30))
+            .build()
+            .expect_with("Failed to create HTTP client")
     }
 }

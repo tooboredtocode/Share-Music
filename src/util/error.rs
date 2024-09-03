@@ -3,9 +3,8 @@
  *  All Rights Reserved
  */
 
+use image::ImageError;
 use std::error::Error;
-
-use hyper::http;
 use tokio::task::JoinError;
 use tracing::{error, warn};
 use twilight_gateway::stream::StartRecommendedError;
@@ -14,7 +13,6 @@ use twilight_http::Error as TwilightHttpErr;
 
 use crate::commands::error::InvalidCommandInteraction;
 use crate::context::{ClusterState, Ctx};
-use crate::util::parser::ParsingError;
 
 pub struct ShutDown;
 
@@ -44,15 +42,15 @@ impl BlanketImpl for DeserializeBodyError {}
 
 impl BlanketImpl for StartRecommendedError {}
 
-impl BlanketImpl for hyper::Error {}
-
-impl BlanketImpl for http::Error {}
+impl BlanketImpl for reqwest::Error {}
 
 impl BlanketImpl for InvalidCommandInteraction {}
 
-impl BlanketImpl for ParsingError {}
+impl BlanketImpl for std::io::Error {}
 
 impl BlanketImpl for JoinError {}
+
+impl BlanketImpl for ImageError {}
 
 impl<T, E: BlanketImpl> Expectable<T> for Result<T, E> {
     fn expect_with(self, msg: &str) -> Result<T, ShutDown> {

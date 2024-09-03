@@ -7,7 +7,7 @@ use std::borrow::Cow;
 use std::fmt::{Display, Formatter};
 use std::time::Instant;
 
-use hyper::{Body, Method};
+use reqwest::Method;
 use tracing::{instrument, Instrument};
 
 pub use api_type::*;
@@ -15,7 +15,6 @@ pub use error::ApiErr;
 
 use crate::context::metrics::ThirdPartyLabels;
 use crate::context::Ctx;
-use crate::util::parser;
 
 mod api_type;
 mod error;
@@ -64,15 +63,15 @@ impl Display for OdesliEndpoints {
 pub async fn fetch_from_api(url: &String, context: &Ctx) -> Result<OdesliResponse, ApiErr> {
     let req_data = OdesliEndpoints::links(url);
 
-    let req = hyper::Request::builder()
-        .method(req_data.method())
-        .uri(req_data.uri())
-        .body(Body::empty())?;
+    let req = context
+        .http_client
+        .request(req_data.method(), req_data.uri())
+        .build()?;
 
     let now = Instant::now();
     let resp = context
         .http_client
-        .request(req)
+        .execute(req)
         .instrument(tracing::info_span!("http_request"))
         .await?;
     let diff = now.elapsed();
@@ -91,5 +90,5 @@ pub async fn fetch_from_api(url: &String, context: &Ctx) -> Result<OdesliRespons
         return Err(ApiErr::Non200Response(resp.status()));
     }
 
-    Ok(parser::parse(resp).await?)
+    Ok(resp.json().await?)
 }
