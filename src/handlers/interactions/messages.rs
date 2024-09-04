@@ -1,6 +1,6 @@
 /*
- *  Copyright (c) 2021-2022 tooboredtocode
- *  All Rights Reserved
+ * Copyright (c) 2021-2024 tooboredtocode
+ * All Rights Reserved
  */
 
 use crate::util::discord_locales::DiscordLocale;
