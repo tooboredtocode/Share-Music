@@ -12,4 +12,6 @@ updates:
       util:
         patterns:
           - "*"
-        update-types: minor
+        update-types:
+        - "minor"
+        - "patch"
