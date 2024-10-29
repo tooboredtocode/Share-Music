@@ -9,6 +9,7 @@ updates:
       twilight:
         patterns:
           - "twilight*"
-      tracing:
+      util:
         patterns:
-          - "tracing*"
+          - "*"
+        update-types: minor
