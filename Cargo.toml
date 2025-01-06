@@ -6,12 +6,12 @@ publish = false
 build = "build.rs"
 
 [dependencies]
-axum = "0.7"
+axum = "0.8"
 figment = { version = "0.10", features = ["env", "json", "yaml"] }
 futures-util = { default-features = false, version = "0.3" }
 reqwest = { version = "0.12", default-features = false, features = ["rustls-tls-native-roots", "http2", "charset", "json"] }
 image = "0.25"
-itertools = "0.13"
+itertools = "0.14"
 lazy-regex = "3.4"
 parking_lot = "0.12"
 prometheus-client = "0.22"
