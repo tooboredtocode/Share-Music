@@ -120,7 +120,7 @@ impl From<reqwest::Method> for Method {
 }
 
 impl Metrics {
-    pub fn new(cluster_id: u64) -> Self {
+    pub fn new(cluster_id: u16) -> Self {
         let mut registry = Registry::with_prefix("discord");
         let mut r = registry
             .sub_registry_with_label((Cow::from("cluster"), Cow::from(cluster_id.to_string())));
