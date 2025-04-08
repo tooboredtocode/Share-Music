@@ -8,6 +8,8 @@ use twilight_model::application::command::{Command, CommandOptionType, CommandTy
 use twilight_model::application::interaction::application_command::{
     CommandData, CommandOptionValue,
 };
+use twilight_model::application::interaction::InteractionContextType;
+use twilight_model::oauth::ApplicationIntegrationType;
 use twilight_util::builder::command::{CommandBuilder, StringBuilder};
 
 use crate::commands::error::InvalidCommandInteraction;
@@ -38,7 +40,15 @@ pub fn command() -> Command {
         "Teile Musik von für alle Plattformen",
     )])
     .option(url_option())
-    .dm_permission(true)
+    .integration_types([
+        ApplicationIntegrationType::GuildInstall,
+        ApplicationIntegrationType::UserInstall
+    ])
+    .contexts([
+        InteractionContextType::Guild,
+        InteractionContextType::BotDm,
+        InteractionContextType::PrivateChannel
+    ])
     .build()
 }
 

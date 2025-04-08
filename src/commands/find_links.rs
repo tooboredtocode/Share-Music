@@ -4,12 +4,22 @@
  */
 
 use twilight_model::application::command::{Command, CommandType};
+use twilight_model::application::interaction::InteractionContextType;
+use twilight_model::oauth::ApplicationIntegrationType;
 use twilight_util::builder::command::CommandBuilder;
 
 pub const COMMAND_NAME: &str = "Find Links";
 
 pub fn command() -> Command {
     CommandBuilder::new(COMMAND_NAME, "", CommandType::Message)
-        .dm_permission(true)
+        .integration_types([
+            ApplicationIntegrationType::GuildInstall,
+            ApplicationIntegrationType::UserInstall
+        ])
+        .contexts([
+            InteractionContextType::Guild,
+            InteractionContextType::BotDm,
+            InteractionContextType::PrivateChannel
+        ])
         .build()
 }

@@ -8,6 +8,8 @@ use twilight_model::application::command::{Command, CommandOptionType, CommandTy
 use twilight_model::application::interaction::application_command::{
     CommandData, CommandOptionValue,
 };
+use twilight_model::application::interaction::InteractionContextType;
+use twilight_model::oauth::ApplicationIntegrationType;
 use twilight_util::builder::command::{CommandBuilder, NumberBuilder, StringBuilder};
 
 use crate::commands::error::InvalidCommandInteraction;
@@ -56,7 +58,14 @@ pub fn command() -> Command {
         .option(percent_factor_option())
         .option(saturation_factor_option())
         .option(luminosity_factor_option())
-        .dm_permission(true)
+        .integration_types([
+            ApplicationIntegrationType::GuildInstall,
+        ])
+        .contexts([
+            InteractionContextType::Guild,
+            InteractionContextType::BotDm,
+            InteractionContextType::PrivateChannel
+        ])
         .build()
 }
 

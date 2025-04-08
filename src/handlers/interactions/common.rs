@@ -9,7 +9,7 @@ use std::time::Duration;
 use lazy_regex::{lazy_regex, Lazy};
 use regex::Regex;
 use tokio::time;
-use tracing::{debug, debug_span, Instrument};
+use tracing::{debug, debug_span, warn, Instrument};
 use twilight_model::application::interaction::Interaction;
 use twilight_util::builder::embed::{
     EmbedAuthorBuilder, EmbedBuilder, EmbedFooterBuilder, ImageSource,
@@ -18,9 +18,9 @@ use twilight_util::builder::embed::{
 use crate::context::Ctx;
 use crate::handlers::interactions::messages;
 use crate::util::colour::{get_dominant_colour, RGBPixel};
-use crate::util::error::Expectable;
 use crate::util::odesli::{fetch_from_api, ApiErr, EntityData, OdesliResponse};
 use crate::util::{create_termination_future, EmptyResult};
+use crate::util::error::expect_warn;
 
 // language=RegExp
 pub static VALID_LINKS_REGEX: Lazy<Regex> = lazy_regex!(
@@ -71,49 +71,43 @@ pub fn additional_link_validation(link: &str) -> Result<(), InvalidLink> {
     Ok(())
 }
 
-pub async fn map_odesli_response(
-    resp: Result<OdesliResponse, ApiErr>,
+pub async fn log_odesli_error(
+    err: ApiErr,
     context: &Ctx,
     inter: &Interaction,
-) -> EmptyResult<OdesliResponse> {
-    match resp.warn_with("Failed to get the data from the api") {
-        Some(s) => Ok(s),
-        None => {
-            if let Some(msg_resp) = context
-                .interaction_client()
-                .create_followup(inter.token.as_str())
-                .content(messages::error((&inter.locale).into()))
-                .expect("Somehow the static string is too long, this should never happen")
+) {
+    warn!(failed_with = %err, "Failed to get the data from the api");
+
+    if let Ok(msg_resp) = context
+        .interaction_client()
+        .create_followup(inter.token.as_str())
+        .content(messages::error((&inter.locale).into()))
+        .into_future()
+        .instrument(debug_span!("sending_error_message"))
+        .await
+        .map_err(expect_warn!("Failed to inform user of the error"))
+    {
+        let msg = match msg_resp.model().await {
+            Ok(ok) => ok,
+            Err(_) => return,
+        };
+
+        let ctx = context.clone();
+
+        tokio::spawn(async move {
+            let _ = time::timeout(
+                Duration::from_secs(15),
+                create_termination_future(&ctx.state),
+            )
+                .await;
+
+            ctx.discord_client
+                .delete_message(msg.channel_id, msg.id)
                 .into_future()
-                .instrument(debug_span!("sending_error_message"))
+                .instrument(debug_span!("deleting_error_message"))
                 .await
-                .warn_with("Failed to inform user of the error")
-            {
-                let msg = match msg_resp.model().await {
-                    Ok(ok) => ok,
-                    Err(_) => return Err(()),
-                };
-
-                let ctx = context.clone();
-
-                tokio::spawn(async move {
-                    let _ = time::timeout(
-                        Duration::from_secs(15),
-                        create_termination_future(&ctx.state),
-                    )
-                    .await;
-
-                    ctx.discord_client
-                        .delete_message(msg.channel_id, msg.id)
-                        .into_future()
-                        .instrument(debug_span!("deleting_error_message"))
-                        .await
-                        .warn_with("Failed to delete Error Message")
-                });
-            }
-
-            Err(())
-        }
+                .map_err(expect_warn!("Failed to delete Error Message"))
+        });
     }
 }
 
@@ -170,7 +164,13 @@ pub async fn embed_routine(
     inter: &Interaction,
 ) -> EmptyResult<EmbedBuilder> {
     debug!("Fetching information from API");
-    let data = map_odesli_response(fetch_from_api(url, context).await, context, inter).await?;
+    let data = match fetch_from_api(url, context).await {
+        Ok(data) => data,
+        Err(err) => {
+            log_odesli_error(err, context, inter).await;
+            return Err(())
+        }
+    };
 
     let entity_data = data.get_data();
     debug!(
@@ -182,7 +182,9 @@ pub async fn embed_routine(
     let colour = match &entity_data.thumbnail_url {
         Some(url) => {
             debug!("Album/Song has a Thumbnail, getting dominant colour");
-            get_dominant_colour(url, context, Default::default()).await
+            get_dominant_colour(url, context, Default::default())
+                .await
+                .ok()
         }
         None => None,
     };

@@ -10,14 +10,13 @@ use crate::context::ClusterState;
 pub mod colour;
 pub mod discord_locales;
 pub mod error;
-pub mod event_poller;
 pub mod interaction;
 pub mod odesli;
 pub mod setup_logger;
 pub mod signal;
+pub mod shard_poller;
 
-pub type ShareResult<T> = Result<T, error::ShutDown>;
-pub type EmptyResult<T> = Result<T, ()>;
+pub use error::EmptyResult;
 
 pub type TerminationFuture = StateFuture<ClusterState, fn(&ClusterState) -> bool>;
 

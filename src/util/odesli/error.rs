@@ -8,8 +8,6 @@ use std::fmt::{Display, Formatter};
 
 use reqwest::StatusCode;
 
-use crate::util::error::BlanketImpl;
-
 #[derive(Debug)]
 pub enum ApiErr {
     Reqwest(reqwest::Error),
@@ -32,5 +30,3 @@ impl Display for ApiErr {
 }
 
 impl Error for ApiErr {}
-
-impl BlanketImpl for ApiErr {}

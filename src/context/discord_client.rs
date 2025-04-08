@@ -9,15 +9,15 @@ use twilight_http::Client;
 use twilight_model::channel::message::AllowedMentions;
 use twilight_model::id::marker::ApplicationMarker;
 use twilight_model::id::Id;
-
+use crate::config::Config;
 use crate::context::Context;
-use crate::util::error::Expectable;
-use crate::{Config, ShareResult};
+use crate::util::EmptyResult;
+use crate::util::error::expect_err;
 
 impl Context {
     pub(super) async fn discord_client_from_config(
         config: &Config,
-    ) -> ShareResult<(Client, Id<ApplicationMarker>)> {
+    ) -> EmptyResult<(Client, Id<ApplicationMarker>)> {
         let builder = Client::builder()
             .token(config.discord.token.clone())
             .default_allowed_mentions(AllowedMentions::default());
@@ -29,10 +29,10 @@ impl Context {
         let user = client
             .current_user()
             .await
-            .expect_with("Failed to get current user")?
+            .map_err(expect_err!("Failed to get current user"))?
             .model()
             .await
-            .expect_with("Failed to deserialize user response")?;
+            .map_err(expect_err!("Failed to deserialize user response"))?;
 
         info!(
             "Api credentials validated: {}#{} and application id {}",

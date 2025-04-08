@@ -9,17 +9,18 @@ use prometheus_client::encoding::EncodeLabelValue;
 use reqwest::Client;
 use this_state::State as ThisState;
 use tracing::info;
-use twilight_gateway::{stream, Config as ShardConfig, Shard};
+use twilight_gateway::{create_recommended, Shard, ConfigBuilder as ShardConfigBuilder};
 use twilight_http::Client as TwilightClient;
 use twilight_model::id::marker::ApplicationMarker;
 use twilight_model::id::Id;
 
 use crate::config::colour::Options as ColourOptions;
+use crate::config::Config;
 use crate::constants::cluster_consts;
 use crate::context::metrics::Metrics;
-use crate::util::error::Expectable;
+use crate::util::EmptyResult;
 use crate::util::signal::start_signal_listener;
-use crate::{Config, ShareResult};
+use crate::util::error::expect_err;
 
 mod discord_client;
 mod http_client;
@@ -71,7 +72,7 @@ pub struct SavedConfig {
 pub type Ctx = Arc<Context>;
 
 impl Context {
-    pub async fn new(config: &Config) -> ShareResult<(Arc<Self>, Vec<Shard>)> {
+    pub async fn new(config: &Config) -> EmptyResult<(Arc<Self>, impl ExactSizeIterator<Item = Shard>)> {
         info!("Creating Cluster");
 
         let metrics = Metrics::new(0);
@@ -90,19 +91,7 @@ impl Context {
         start_signal_listener(state.clone());
 
         let (discord_client, bot_id) = Self::discord_client_from_config(config).await?;
-        let discord_shards = stream::create_recommended(
-            &discord_client,
-            ShardConfig::builder(
-                config.discord.token.clone(),
-                cluster_consts::GATEWAY_INTENTS,
-            )
-            .presence(cluster_consts::presence())
-            .build(),
-            |_, builder| builder.build(),
-        )
-        .await
-        .expect_with("Failed to create recommended shards")?
-        .collect();
+        let discord_shards = Self::create_shards(&discord_client, config).await?;
 
         let http_client = Self::create_http_client()?;
 
@@ -120,5 +109,23 @@ impl Context {
         .into();
 
         Ok((ctx, discord_shards))
+    }
+
+    async fn create_shards(
+        client: &TwilightClient,
+        config: &Config,
+    ) -> EmptyResult<impl ExactSizeIterator<Item = Shard>> {
+        let shard_config = ShardConfigBuilder::new(
+            config.discord.token.clone(),
+            cluster_consts::GATEWAY_INTENTS,
+        )
+            .presence(cluster_consts::presence())
+            .build();
+
+        let shards = create_recommended(client, shard_config, |_, builder| builder.build())
+            .await
+            .map_err(expect_err!("Failed to create recommended number of shards"))?;
+
+        Ok(shards)
     }
 }

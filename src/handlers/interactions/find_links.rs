@@ -15,9 +15,9 @@ use crate::handlers::interactions::common::{
     additional_link_validation, embed_routine, VALID_LINKS_REGEX,
 };
 use crate::handlers::interactions::messages::no_links_found;
-use crate::util::error::Expectable;
 use crate::util::interaction::{defer, get_message, respond_with};
 use crate::util::EmptyResult;
+use crate::util::error::expect_warn;
 
 pub async fn handle(inter: &Interaction, data: &CommandData, context: Ctx) {
     // use an inner function to make splitting the code easier
@@ -67,20 +67,18 @@ async fn handle_inner(inter: &Interaction, data: &CommandData, context: Ctx) -> 
 
     defer_future
         .await
-        .warn_with("Failed to join the defer future")
-        .ok_or(())??;
+        .map_err(expect_warn!("Failed to join the defer future"))??;
 
     let r = context
         .interaction_client()
         .create_followup(inter.token.as_str())
         .embeds(embeds.as_slice())
-        .expect("Somehow more than 10 embeds were created, this should never happen")
         .into_future()
         .instrument(debug_span!("sending_response"))
         .await
-        .warn_with("Failed to send the response to the user");
+        .map_err(expect_warn!("Failed to send the response to the user"));
 
-    if r.is_some() {
+    if r.is_ok() {
         debug!("Successfully sent Response");
     }
 

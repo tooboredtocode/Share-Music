@@ -17,7 +17,8 @@ pub use rgb_pixel::RGBPixel;
 use crate::constants::colour_consts;
 use crate::context::metrics::{Method, ThirdPartyLabels};
 use crate::context::Ctx;
-use crate::util::error::Expectable;
+use crate::util::EmptyResult;
+use crate::util::error::expect_warn;
 
 mod hsl_pixel;
 mod pixel_group;
@@ -57,7 +58,7 @@ pub async fn get_dominant_colour(
     url: &String,
     context: &Ctx,
     options: Options,
-) -> Option<RGBPixel> {
+) -> EmptyResult<RGBPixel> {
     let options = options.populate(context);
 
     let img = fetch_image(url, context).await?;
@@ -89,19 +90,21 @@ pub async fn get_dominant_colour(
         .max_by(|a, b| {
             a.dom_val(num_pixels, options)
                 .total_cmp(&b.dom_val(num_pixels, options))
-        })?
+        })
+        .ok_or(())?
         .most_common_colour()
+        .ok_or(())
 }
 
 #[instrument(level = "debug", skip_all)]
-async fn fetch_image(url: &String, context: &Ctx) -> Option<DynamicImage> {
+async fn fetch_image(url: &String, context: &Ctx) -> EmptyResult<DynamicImage> {
     debug!(url, "Fetching image");
 
     let req = context
         .http_client
         .get(url)
         .build()
-        .warn_with("Failed to build thumbnail request")?;
+        .map_err(expect_warn!("Failed to build thumbnail request"))?;
 
     let metrics_url = format!(
         "{}://{}",
@@ -115,7 +118,7 @@ async fn fetch_image(url: &String, context: &Ctx) -> Option<DynamicImage> {
         .execute(req)
         .instrument(debug_span!("http_request"))
         .await
-        .warn_with("Failed to fetch thumbnail")?;
+        .map_err(expect_warn!("Failed to fetch thumbnail"))?;
     let diff = now.elapsed();
 
     context
@@ -132,9 +135,9 @@ async fn fetch_image(url: &String, context: &Ctx) -> Option<DynamicImage> {
     let bytes = resp
         .bytes()
         .await
-        .warn_with("Failed to read thumbnail bytes");
+        .map_err(expect_warn!("Failed to read thumbnail bytes"));
     let mut img = image::load_from_memory(bytes.as_deref().unwrap_or(EMPTY))
-        .warn_with("Failed to parse image, url may have pointed to a file that wasn't an image")?;
+        .map_err(expect_warn!("Failed to parse image, url may have pointed to a file that wasn't an image"))?;
 
     if (colour_consts::MAX_IMAGE_SIZE < img.width())
         | (colour_consts::MAX_IMAGE_SIZE < img.height())
@@ -147,5 +150,5 @@ async fn fetch_image(url: &String, context: &Ctx) -> Option<DynamicImage> {
     }
 
     debug!("Successfully parsed image");
-    Some(img)
+    Ok(img)
 }

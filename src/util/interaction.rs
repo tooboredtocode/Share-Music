@@ -14,20 +14,20 @@ use twilight_util::builder::InteractionResponseDataBuilder;
 
 use crate::commands::sync_commands;
 use crate::context::{ClusterState, Ctx};
-use crate::util::error::Expectable;
 use crate::util::EmptyResult;
+use crate::util::error::expect_warn;
 
 pub async fn get_options<'a, T>(data: &'a CommandData, context: &Ctx) -> EmptyResult<T>
 where
     T: TryFrom<&'a CommandData>,
-    Result<T, T::Error>: Expectable<T>,
+    T::Error: std::error::Error + Send + Sync + 'static,
 {
     let res: T = match data
         .try_into()
-        .warn_with("Received Invalid Interaction data, re-syncing commands")
+        .map_err(expect_warn!("Received Invalid Interaction data, re-syncing commands"))
     {
-        Some(s) => s,
-        None => {
+        Ok(s) => s,
+        Err(()) => {
             if sync_commands(context).await.is_err() {
                 context.state.set(ClusterState::Crashing);
             }
@@ -86,7 +86,7 @@ pub fn defer(inter: &Interaction, context: &Ctx) -> JoinHandle<EmptyResult<()>> 
 }
 
 pub async fn respond_with(inter: &Interaction, context: &Ctx, msg: &str) {
-    context
+    let _ = context
         .interaction_client()
         .create_response(
             inter.id,
@@ -101,5 +101,5 @@ pub async fn respond_with(inter: &Interaction, context: &Ctx, msg: &str) {
             },
         )
         .await
-        .warn_with("Failed to respond to the Interaction");
+        .map_err(expect_warn!("Failed to respond to the Interaction"));
 }

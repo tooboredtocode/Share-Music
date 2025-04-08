@@ -17,16 +17,15 @@ use std::net::SocketAddr;
 use std::sync::atomic::AtomicU64;
 use std::sync::Arc;
 use tracing::{info, warn};
-use twilight_gateway::stream::ShardRef;
-use twilight_gateway::ConnectionStatus;
+use twilight_gateway::{Shard, ShardState};
 use twilight_model::gateway::event::Event;
 
 use crate::constants::{GIT_BRANCH, GIT_REVISION, NAME, RUST_VERSION, VERSION};
 use crate::context::metrics::guild_store::{GuildState, GuildStore};
 use crate::context::{ClusterState, Ctx};
-use crate::util::error::Expectable;
-use crate::util::{create_termination_future, ShareResult};
 use crate::{Config, Context};
+use crate::util::{create_termination_future, EmptyResult};
+use crate::util::error::expect_err;
 
 mod guild_store;
 
@@ -40,7 +39,7 @@ pub struct Metrics {
     guild_store: GuildStore,
 
     pub shard_states: Family<ShardStateLabels, Gauge>,
-    current_states: Mutex<HashMap<u64, String>>,
+    current_states: Mutex<HashMap<u32, String>>,
     pub shard_latencies: Family<ShardLatencyLabels, Gauge<f64, AtomicU64>>,
     pub cluster_state: Family<ClusterLabels, Gauge>,
 
@@ -57,24 +56,24 @@ struct VersionLabels {
 
 #[derive(Clone, Debug, Hash, PartialEq, Eq, EncodeLabelSet)]
 pub struct EventLabels {
-    pub shard: u64,
+    pub shard: u32,
     pub event: Cow<'static, str>,
 }
 
 #[derive(Clone, Debug, Hash, PartialEq, Eq, EncodeLabelSet)]
 pub struct ShardStateLabels {
-    pub shard: u64,
+    pub shard: u32,
     pub state: String,
 }
 
 #[derive(Clone, Debug, Hash, PartialEq, Eq, EncodeLabelSet)]
 pub struct ShardLatencyLabels {
-    pub shard: u64,
+    pub shard: u32,
 }
 
 #[derive(Clone, Debug, Hash, PartialEq, Eq, EncodeLabelSet)]
 pub struct GuildLabels {
-    pub shard: u64,
+    pub shard: u32,
     pub state: GuildState,
 }
 
@@ -201,7 +200,7 @@ impl Metrics {
         }
     }
 
-    pub fn update_cluster_metrics(&self, shard: ShardRef, event: &Event, ctx: &Ctx) {
+    pub fn update_cluster_metrics(&self, shard: &Shard, event: &Event, ctx: &Ctx) {
         if let Some(name) = event.kind().name() {
             self.gateway_events
                 .get_or_create(&EventLabels {
@@ -235,7 +234,7 @@ impl Metrics {
         let mut lock = self.current_states.lock();
         self.shard_states.clear();
 
-        lock.insert(shard.id().number(), shard_status_to_string(shard.status()));
+        lock.insert(shard.id().number(), shard_status_to_string(shard.state()));
         for (shard, state) in lock.iter() {
             self.shard_states
                 .get_or_create(&ShardStateLabels {
@@ -247,11 +246,11 @@ impl Metrics {
     }
 }
 
-fn shard_status_to_string(status: &ConnectionStatus) -> String {
-    use ConnectionStatus::*;
+fn shard_status_to_string(status: ShardState) -> String {
+    use ShardState::*;
 
     match status {
-        Connected => "Connected",
+        Active => "Active",
         Disconnected { .. } => "Disconnected",
         FatallyClosed { .. } => "FatallyClosed",
         Identifying => "Identifying",
@@ -287,7 +286,7 @@ async fn metrics_handler(
 }
 
 impl Context {
-    pub async fn start_metrics_server(self: &Arc<Self>, config: &Config) -> ShareResult<()> {
+    pub async fn start_metrics_server(self: &Arc<Self>, config: &Config) -> EmptyResult<()> {
         use axum::handler::Handler;
 
         let app = metrics_handler.with_state(self.clone());
@@ -295,17 +294,21 @@ impl Context {
         let addr: SocketAddr = ([0, 0, 0, 0], config.metrics.listen_port).into();
         let listener = tokio::net::TcpListener::bind(addr)
             .await
-            .expect_with("Failed to bind to metrics address")?;
+            .map_err(expect_err!("Failed to bind to metrics address"))?;
 
         let state = self.clone();
         let termination_future = create_termination_future(&self.state);
 
         info!("Starting Metrics Server");
         tokio::spawn(async move {
-            axum::serve(listener, app)
+            let res = axum::serve(listener, app)
                 .with_graceful_shutdown(termination_future)
                 .await
-                .expect_with_state("Metrics server crashed", &state)
+                .map_err(expect_err!("Metrics server crashed"));
+
+            if res.is_err() {
+                state.state.set(ClusterState::Crashing)
+            }
         });
 
         Ok(())
