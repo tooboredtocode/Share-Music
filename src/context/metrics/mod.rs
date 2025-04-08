@@ -22,8 +22,7 @@ use twilight_model::gateway::event::Event;
 
 use crate::constants::{GIT_BRANCH, GIT_REVISION, NAME, RUST_VERSION, VERSION};
 use crate::context::metrics::guild_store::{GuildState, GuildStore};
-use crate::context::{ClusterState, Ctx};
-use crate::{Config, Context};
+use crate::context::{ClusterState, Context, Ctx};
 use crate::util::{create_termination_future, EmptyResult};
 use crate::util::error::expect_err;
 
@@ -286,12 +285,12 @@ async fn metrics_handler(
 }
 
 impl Context {
-    pub async fn start_metrics_server(self: &Arc<Self>, config: &Config) -> EmptyResult<()> {
+    pub async fn start_metrics_server(self: &Arc<Self>, port: u16) -> EmptyResult<()> {
         use axum::handler::Handler;
 
         let app = metrics_handler.with_state(self.clone());
 
-        let addr: SocketAddr = ([0, 0, 0, 0], config.metrics.listen_port).into();
+        let addr: SocketAddr = ([0, 0, 0, 0], port).into();
         let listener = tokio::net::TcpListener::bind(addr)
             .await
             .map_err(expect_err!("Failed to bind to metrics address"))?;

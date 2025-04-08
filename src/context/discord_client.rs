@@ -9,17 +9,16 @@ use twilight_http::Client;
 use twilight_model::channel::message::AllowedMentions;
 use twilight_model::id::marker::ApplicationMarker;
 use twilight_model::id::Id;
-use crate::config::Config;
 use crate::context::Context;
 use crate::util::EmptyResult;
 use crate::util::error::expect_err;
 
 impl Context {
     pub(super) async fn discord_client_from_config(
-        config: &Config,
+        token: &str,
     ) -> EmptyResult<(Client, Id<ApplicationMarker>)> {
         let builder = Client::builder()
-            .token(config.discord.token.clone())
+            .token(token.to_string())
             .default_allowed_mentions(AllowedMentions::default());
 
         let client = builder.build();

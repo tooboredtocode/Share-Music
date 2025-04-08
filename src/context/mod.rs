@@ -13,9 +13,7 @@ use twilight_gateway::{create_recommended, Shard, ConfigBuilder as ShardConfigBu
 use twilight_http::Client as TwilightClient;
 use twilight_model::id::marker::ApplicationMarker;
 use twilight_model::id::Id;
-
-use crate::config::colour::Options as ColourOptions;
-use crate::config::Config;
+use crate::color_config::ColorConfig;
 use crate::constants::cluster_consts;
 use crate::context::metrics::Metrics;
 use crate::util::EmptyResult;
@@ -66,13 +64,15 @@ pub struct Context {
 #[derive(Debug)]
 pub struct SavedConfig {
     pub debug_server: Vec<u64>,
-    pub colour: ColourOptions,
+    pub color: ColorConfig,
 }
 
 pub type Ctx = Arc<Context>;
 
 impl Context {
-    pub async fn new(config: &Config) -> EmptyResult<(Arc<Self>, impl ExactSizeIterator<Item = Shard>)> {
+    pub async fn new(
+        token: &str, debug_servers: &[u64], color_config: ColorConfig
+    ) -> EmptyResult<(Arc<Self>, impl ExactSizeIterator<Item = Shard>)> {
         info!("Creating Cluster");
 
         let metrics = Metrics::new(0);
@@ -90,8 +90,8 @@ impl Context {
 
         start_signal_listener(state.clone());
 
-        let (discord_client, bot_id) = Self::discord_client_from_config(config).await?;
-        let discord_shards = Self::create_shards(&discord_client, config).await?;
+        let (discord_client, bot_id) = Self::discord_client_from_config(token).await?;
+        let discord_shards = Self::create_shards(&discord_client, token).await?;
 
         let http_client = Self::create_http_client()?;
 
@@ -100,8 +100,8 @@ impl Context {
             bot_id,
             http_client,
             cfg: SavedConfig {
-                debug_server: config.discord.debug_server.clone(),
-                colour: config.colour,
+                debug_server: debug_servers.to_vec(),
+                color: color_config
             },
             metrics,
             state,
@@ -113,10 +113,10 @@ impl Context {
 
     async fn create_shards(
         client: &TwilightClient,
-        config: &Config,
+        token: &str,
     ) -> EmptyResult<impl ExactSizeIterator<Item = Shard>> {
         let shard_config = ShardConfigBuilder::new(
-            config.discord.token.clone(),
+            token.to_string(),
             cluster_consts::GATEWAY_INTENTS,
         )
             .presence(cluster_consts::presence())

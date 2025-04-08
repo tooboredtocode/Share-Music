@@ -34,7 +34,7 @@ pub struct Options {
 
 impl Options {
     fn populate(self, ctx: &Ctx) -> PopulatedOptions {
-        let cfg = &ctx.cfg.colour;
+        let cfg = &ctx.cfg.color;
 
         PopulatedOptions {
             brightest_percent: self.brightest_percent.unwrap_or(cfg.brightest_percent),

@@ -2,11 +2,12 @@
  * Copyright (c) 2021-2024 tooboredtocode
  * All Rights Reserved
  */
-
+use std::path::Path;
+use std::process::exit;
 use serde::Deserialize;
 
 #[derive(Copy, Clone, Debug, Deserialize)]
-pub struct Options {
+pub struct ColorConfig {
     #[serde(default = "default_brightest_percent")]
     pub brightest_percent: f32,
 
@@ -18,7 +19,24 @@ pub struct Options {
     pub luminosity_factor: f32,
 }
 
-impl Default for Options {
+impl ColorConfig {
+    pub fn from_file(file: &Path) -> Self {
+        let file = match std::fs::File::open(file) {
+            Ok(file) => file,
+            Err(e) => {
+                eprintln!("Failed to open color config file: {}", e);
+                exit(1)
+            }
+        };
+
+        serde_yaml::from_reader(file).unwrap_or_else(|err| {
+            eprintln!("Failed to parse color config file: {}", err);
+            exit(1)
+        })
+    }
+}
+
+impl Default for ColorConfig {
     fn default() -> Self {
         Self {
             brightest_percent: default_brightest_percent(),

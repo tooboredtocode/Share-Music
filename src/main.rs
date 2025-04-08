@@ -7,34 +7,34 @@ use std::time::Duration;
 use tokio::task::JoinSet;
 use tracing::{error, info, info_span};
 use twilight_gateway::Shard;
-use crate::config::Config;
+use crate::args::Args;
+use crate::color_config::ColorConfig;
 use crate::context::{ClusterState, Ctx};
 use crate::context::Context;
 use crate::util::{setup_logger, EmptyResult};
 use crate::util::shard_poller::ShardPoller;
 
 mod commands;
-mod config;
+mod args;
 mod constants;
 mod context;
 mod handlers;
 mod util;
+mod color_config;
 
 fn main() {
-    let cfg = match Config::load() {
-        Ok(ok) => ok,
-        Err(err) => {
-            eprintln!("Could not read config: {}", err);
-            return;
-        }
-    };
+    let args = Args::parse();
+    let color_config = args.color_config
+        .as_ref()
+        .map(|path| ColorConfig::from_file(path))
+        .unwrap_or_default();
 
     let runtime = tokio::runtime::Builder::new_multi_thread()
         .enable_all()
         .thread_name(format!("{}Pool", constants::NAME_SHORT))
         .build()
         .expect("Failed to build tokio runtime");
-    let _ = runtime.block_on(async_main(cfg));
+    let _ = runtime.block_on(async_main(args, color_config));
 
     info!("Main loop exited gracefully, giving the last tasks 30 seconds to finish cleaning up");
     runtime.shutdown_timeout(Duration::from_secs(30));
@@ -42,12 +42,12 @@ fn main() {
     info!("Shutdown complete!");
 }
 
-async fn async_main(cfg: Config) -> EmptyResult<()> {
-    setup_logger::setup(&cfg);
+async fn async_main(args: Args, color_config: ColorConfig) -> EmptyResult<()> {
+    setup_logger::setup(&args.log, args.log_format);
     info!("{} v{} initializing!", constants::NAME, constants::VERSION);
 
-    let (context, shards) = Context::new(&cfg).await?;
-    context.start_metrics_server(&cfg).await?;
+    let (context, shards) = Context::new(&args.token, &args.debug_server, color_config).await?;
+    context.start_metrics_server(args.metrics_port).await?;
     commands::sync_commands(&context).await?;
 
     info!("Cluster connecting to discord...");
