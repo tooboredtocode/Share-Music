@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2021-2024 tooboredtocode
+ * Copyright (c) 2021-2025 tooboredtocode
  * All Rights Reserved
  */
 use futures_util::{ready, Stream};
@@ -53,7 +53,7 @@ impl ShardPoller {
     }
 }
 
-impl<'a> Future for ShardPollerFuture<'a> {
+impl Future for ShardPollerFuture<'_> {
     type Output = Result<Option<Result<Event, ReceiveMessageError>>, FatallyClosedShard>;
 
     fn poll(mut self: Pin<&mut Self>, cx: &mut Context<'_>) -> Poll<Self::Output> {

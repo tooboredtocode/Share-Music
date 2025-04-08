@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2021-2024 tooboredtocode
+ * Copyright (c) 2021-2025 tooboredtocode
  * All Rights Reserved
  */
 
@@ -170,8 +170,7 @@ impl Metrics {
             Histogram::new(
                 [
                     0.1, 0.15, 0.2, 0.3, 0.5, 0.75, 1.0, 1.5, 2.0, 3.0, 5.0, 7.5, 10.0, 15.0, 20.0,
-                ]
-                .into_iter(),
+                ],
             )
         });
         r.register(
@@ -251,7 +250,7 @@ fn shard_status_to_string(status: ShardState) -> String {
     match status {
         Active => "Active",
         Disconnected { .. } => "Disconnected",
-        FatallyClosed { .. } => "FatallyClosed",
+        FatallyClosed => "FatallyClosed",
         Identifying => "Identifying",
         Resuming => "Resuming",
     }

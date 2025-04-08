@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2021-2024 tooboredtocode
+ * Copyright (c) 2021-2025 tooboredtocode
  * All Rights Reserved
  */
 

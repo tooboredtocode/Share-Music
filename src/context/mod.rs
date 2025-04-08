@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2021-2024 tooboredtocode
+ * Copyright (c) 2021-2025 tooboredtocode
  * All Rights Reserved
  */
 use std::cmp::max;
@@ -126,7 +126,7 @@ impl Context {
         cluster_id: u16,
         cluster_count: u16,
     ) -> EmptyResult<impl ExactSizeIterator<Item = Shard>> {
-        if !(cluster_id < cluster_count) {
+        if cluster_id >= cluster_count {
             error!("Cluster ID ({}) must be smaller than the number of clusters ({})", cluster_id, cluster_count);
             return Err(())
         }
