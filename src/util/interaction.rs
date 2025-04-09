@@ -2,8 +2,10 @@
  * Copyright (c) 2021-2025 tooboredtocode
  * All Rights Reserved
  */
-
+use std::future::IntoFuture;
+use std::time::Duration;
 use tokio::task::JoinHandle;
+use tokio::time;
 use tracing::{debug_span, warn, Instrument};
 use twilight_model::application::interaction::application_command::CommandData;
 use twilight_model::application::interaction::Interaction;
@@ -14,7 +16,7 @@ use twilight_util::builder::InteractionResponseDataBuilder;
 
 use crate::commands::sync_commands;
 use crate::context::{ClusterState, Ctx};
-use crate::util::EmptyResult;
+use crate::util::{create_termination_future, EmptyResult};
 use crate::util::error::expect_warn;
 
 pub async fn get_options<'a, T>(data: &'a CommandData, context: &Ctx) -> EmptyResult<T>
@@ -102,4 +104,34 @@ pub async fn respond_with(inter: &Interaction, context: &Ctx, msg: &str) {
         )
         .await
         .map_err(expect_warn!("Failed to respond to the Interaction"));
+}
+
+pub async fn update_defer_with_error(inter: &Interaction, context: &Ctx, msg: &str) {
+    if context
+        .interaction_client()
+        .update_response(inter.token.as_str())
+        .content(Some(msg))
+        .into_future()
+        .instrument(debug_span!("sending_error_message"))
+        .await
+        .map_err(expect_warn!("Failed to inform user of the error"))
+        .is_ok()
+    {
+        let ctx = context.clone();
+        let inter_token = inter.token.clone();
+        tokio::spawn(async move {
+            let _ = time::timeout(
+                Duration::from_secs(15),
+                create_termination_future(&ctx.state),
+            )
+                .await;
+
+            ctx.interaction_client()
+                .delete_response(inter_token.as_str())
+                .into_future()
+                .instrument(debug_span!("deleting_error_message"))
+                .await
+                .map_err(expect_warn!("Failed to delete Error Message"))
+        });
+    }
 }

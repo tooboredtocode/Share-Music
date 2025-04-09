@@ -60,7 +60,7 @@ impl Display for OdesliEndpoints {
 }
 
 #[instrument(level = "debug", skip_all)]
-pub async fn fetch_from_api(url: &String, context: &Ctx) -> Result<OdesliResponse, ApiErr> {
+pub async fn fetch_from_api(url: impl Into<String>, context: &Ctx) -> Result<OdesliResponse, ApiErr> {
     let req_data = OdesliEndpoints::links(url);
 
     let req = context

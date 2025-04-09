@@ -51,16 +51,10 @@ pub struct EntityData {
 
 impl OdesliResponse {
     pub fn links(&self) -> Vec<(String, String)> {
-        let mut res = Vec::new();
-
-        for (key, value) in self.links_by_platform.iter() {
-            if let Platform::Other(_) = key {
-                continue;
-            }
-            res.push((key.to_string(), value.url.clone()))
-        }
-
-        res
+        self.links_by_platform.iter()
+            .filter(|(platform, _)| !matches!(platform, Platform::Other(_)))
+            .map(|(p, l)| (p.to_string(), l.url.clone()))
+            .collect()
     }
 
     pub fn get_data(&self) -> EntityData {
@@ -186,6 +180,7 @@ pub enum Type {
 pub enum Platform {
     Spotify,
     #[allow(non_camel_case_types)]
+    #[serde(rename = "itunes")]
     iTunes,
     AppleMusic,
     #[serde(rename = "youtube")]
@@ -204,6 +199,9 @@ pub enum Platform {
     Spinrilla,
     Audius,
     Audiomack,
+    Anghami,
+    Yandex,
+    #[serde(rename = "boomplay")]
     BoomPlay,
     #[serde(untagged)]
     Other(String),

@@ -4,55 +4,64 @@
  */
 
 use std::future::IntoFuture;
-use tracing::{debug, debug_span, instrument, Instrument};
+use tracing::{debug, debug_span, instrument, warn, Instrument};
 use twilight_model::application::interaction::application_command::CommandData;
 use twilight_model::application::interaction::Interaction;
 
 use crate::commands::share::ShareCommandData;
 use crate::context::Ctx;
-use crate::handlers::interactions::common::{
-    additional_link_validation, InvalidLink, VALID_LINKS_REGEX,
-};
-use crate::handlers::interactions::{common, messages};
-use crate::util::interaction::{defer, get_options, respond_with};
+use crate::handlers::interactions::common::{additional_link_validation, build_embed, data_routine, InvalidLink, VALID_LINKS_REGEX};
+use crate::handlers::interactions::messages;
+use crate::handlers::interactions::show_player::build_components;
+use crate::util::interaction::{defer, get_options, respond_with, update_defer_with_error};
 use crate::util::EmptyResult;
 use crate::util::error::expect_warn;
 
-pub async fn handle(inter: &Interaction, data: &CommandData, context: Ctx) {
+pub async fn handle(inter: Interaction, data: CommandData, context: Ctx) {
     // use an inner function to make splitting the code easier
     let _ = handle_inner(inter, data, context).await;
 }
 
 #[instrument(name = "share_command_handler", level = "debug", skip_all)]
-async fn handle_inner(inter: &Interaction, data: &CommandData, context: Ctx) -> EmptyResult<()> {
+async fn handle_inner(inter: Interaction, data: CommandData, context: Ctx) -> EmptyResult<()> {
     debug!("Received Share Command Interaction");
 
-    let options = get_options(data, &context).await?;
-    validate_url(&options, inter, &context).await?;
+    let options = get_options(&data, &context).await?;
+    validate_url(&options, &inter, &context).await?;
 
     debug!("User passed valid arguments, deferring Response");
-    let defer_future = defer(inter, &context);
+    let defer_future = defer(&inter, &context);
 
-    let embed = common::embed_routine(&options.url, &context, inter)
-        .instrument(debug_span!("embed_routine"))
-        .await?;
+    let (data, entity, color) = match data_routine(&options.url, &context).await {
+        Ok(data) => data,
+        Err(e) => {
+            warn!(failed_with = %e, "Failed to get the data from the api");
+            update_defer_with_error(
+                &inter,
+                &context,
+                messages::error((&inter.locale).into())
+            ).await;
+            return Err(());
+        }
+    };
 
     defer_future
         .await
         .map_err(expect_warn!("Failed to join the defer future"))??;
 
-    let r = context
-        .interaction_client()
-        .create_followup(inter.token.as_str())
-        .embeds(&[embed.build()])
+    let embed = build_embed(&data, entity, color);
+    let components = build_components(&data);
+
+    context.interaction_client()
+        .update_response(inter.token.as_str())
+        .embeds(Some(&[embed.build()]))
+        .components(components.as_ref().map(|c| c.as_ref()))
         .into_future()
         .instrument(debug_span!("sending_response"))
         .await
-        .map_err(expect_warn!("Failed to send the response to the user"));
+        .map_err(expect_warn!("Failed to send the response to the user"))?;
 
-    if r.is_ok() {
-        debug!("Successfully sent Response");
-    }
+    debug!("Successfully sent Response");
 
     Ok(())
 }
