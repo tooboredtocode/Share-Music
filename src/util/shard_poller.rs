@@ -67,7 +67,7 @@ impl Future for ShardPollerFuture<'_> {
             };
 
             if let Some(res) = next.and_then(|message| match message {
-                Message::Text(json) => parse(json, EventTypeFlags::INTERACTION_CREATE).map(|opt| opt.map(Into::into)),
+                Message::Text(json) => parse(json, EventTypeFlags::all()).map(|opt| opt.map(Into::into)),
                 Message::Close(frame) => Ok(Some(Event::GatewayClose(frame))),
             }).transpose() {
                 return Poll::Ready(Ok(Some(res)));
