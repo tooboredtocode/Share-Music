@@ -125,7 +125,7 @@ impl Context {
         token: &str,
         cluster_id: u16,
         cluster_count: u16,
-    ) -> EmptyResult<impl ExactSizeIterator<Item = Shard>> {
+    ) -> EmptyResult<impl ExactSizeIterator<Item = Shard> + use<>> {
         if cluster_id >= cluster_count {
             error!("Cluster ID ({}) must be smaller than the number of clusters ({})", cluster_id, cluster_count);
             return Err(())
