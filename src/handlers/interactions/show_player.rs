@@ -79,10 +79,10 @@ async fn handle_inner(inter: Interaction, data: MessageComponentInteractionData,
     };
 
     let link = match selected.as_str() {
-        "lookup_appleMusic" => find_link_for_platform(&inter, Platform::AppleMusic)?,
-        "lookup_spotify" => find_link_for_platform(&inter, Platform::Spotify)?,
-        "lookup_amazonMusic" => find_link_for_platform(&inter, Platform::AmazonMusic)?,
-        "lookup_youtube" => find_link_for_platform(&inter, Platform::YouTube)?,
+        "lookup_AppleMusic" => find_link_for_platform(&inter, Platform::AppleMusic)?,
+        "lookup_Spotify" => find_link_for_platform(&inter, Platform::Spotify)?,
+        "lookup_AmazonMusic" => find_link_for_platform(&inter, Platform::AmazonMusic)?,
+        "lookup_YouTube" => find_link_for_platform(&inter, Platform::YouTube)?,
         s => s
     };
 

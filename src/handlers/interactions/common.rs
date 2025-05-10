@@ -91,16 +91,16 @@ pub async fn data_routine(url: &str, context: &Ctx) -> Result<(OdesliResponse, E
 // Fixes the links for some platforms, so they work properly
 fn fix_platform_links(resp: &mut OdesliResponse) {
     if let Some(links) = resp.links_by_platform.get_mut(&Platform::AppleMusic) {
-        let new = links.url.replace("geo.music.apple.com", "music.apple.com");
-        let mut new_it = new.split('?');
+        let mut new_iter = links.url.split('?');
 
-        let new = new_it.next().expect("A split should always return something");
-        if let Some(query) = new_it.next() {
+        let new = new_iter.next().expect("A split should always return something");
+        if let Some(query) = new_iter.next() {
             let song_id = query.split('&').find(|s| s.starts_with("i="));
             if let Some(song_id) = song_id {
                 links.url = format!("{}?{}", new, song_id);
             } else {
-                links.url = format!("{}?{}", new, query);
+                // Just return the album link
+                links.url = new.to_string();
             }
         } else {
             links.url = new.to_string();
