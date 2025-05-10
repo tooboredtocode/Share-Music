@@ -4,17 +4,17 @@
  */
 
 use std::future::IntoFuture;
-use tracing::{debug, debug_span, instrument, Instrument};
-use twilight_model::application::interaction::application_command::CommandData;
+use tracing::{Instrument, debug, debug_span, instrument};
 use twilight_model::application::interaction::Interaction;
+use twilight_model::application::interaction::application_command::CommandData;
 use twilight_util::builder::embed::{EmbedBuilder, ImageSource};
 
 use crate::commands::test_colour_consts::TestConstsCommandData;
 use crate::context::Ctx;
-use crate::util::colour::{get_dominant_colour, RGBPixel};
-use crate::util::interaction::{defer, get_options, respond_with};
 use crate::util::EmptyResult;
+use crate::util::colour::{RGBPixel, get_dominant_colour};
 use crate::util::error::expect_warn;
+use crate::util::interaction::{defer, get_options, respond_with};
 
 pub async fn handle(inter: Interaction, data: CommandData, context: Ctx) {
     // use an inner function to make splitting the code easier

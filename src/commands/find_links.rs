@@ -14,12 +14,12 @@ pub fn command() -> Command {
     CommandBuilder::new(COMMAND_NAME, "", CommandType::Message)
         .integration_types([
             ApplicationIntegrationType::GuildInstall,
-            ApplicationIntegrationType::UserInstall
+            ApplicationIntegrationType::UserInstall,
         ])
         .contexts([
             InteractionContextType::Guild,
             InteractionContextType::BotDm,
-            InteractionContextType::PrivateChannel
+            InteractionContextType::PrivateChannel,
         ])
         .build()
 }

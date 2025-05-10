@@ -2,7 +2,7 @@
  * Copyright (c) 2021-2025 tooboredtocode
  * All Rights Reserved
  */
-use futures_util::{ready, Stream};
+use futures_util::{Stream, ready};
 use std::fmt;
 use std::fmt::Formatter;
 use std::future::Future;
@@ -10,11 +10,11 @@ use std::pin::Pin;
 use std::task::{Context, Poll};
 use this_state::State as ThisState;
 use twilight_gateway::error::ReceiveMessageError;
-use twilight_gateway::{parse, EventTypeFlags, Message, Shard};
+use twilight_gateway::{EventTypeFlags, Message, Shard, parse};
 use twilight_model::gateway::event::Event;
 
 use crate::context::{ClusterState, Ctx};
-use crate::util::{create_termination_future, TerminationFuture};
+use crate::util::{TerminationFuture, create_termination_future};
 
 /// A struct that polls a shard for events and handles termination.
 pub struct ShardPoller {
@@ -42,10 +42,7 @@ impl ShardPoller {
         Self::new(&context.state)
     }
 
-    pub fn poll<'a>(
-        &'a mut self,
-        shard: &'a mut Shard,
-    ) -> ShardPollerFuture<'a> {
+    pub fn poll<'a>(&'a mut self, shard: &'a mut Shard) -> ShardPollerFuture<'a> {
         ShardPollerFuture {
             shard,
             poller: self,
@@ -66,10 +63,15 @@ impl Future for ShardPollerFuture<'_> {
                 return Poll::Ready(Ok(None));
             };
 
-            if let Some(res) = next.and_then(|message| match message {
-                Message::Text(json) => parse(json, EventTypeFlags::all()).map(|opt| opt.map(Into::into)),
-                Message::Close(frame) => Ok(Some(Event::GatewayClose(frame))),
-            }).transpose() {
+            if let Some(res) = next
+                .and_then(|message| match message {
+                    Message::Text(json) => {
+                        parse(json, EventTypeFlags::all()).map(|opt| opt.map(Into::into))
+                    }
+                    Message::Close(frame) => Ok(Some(Event::GatewayClose(frame))),
+                })
+                .transpose()
+            {
                 return Poll::Ready(Ok(Some(res)));
             }
         }

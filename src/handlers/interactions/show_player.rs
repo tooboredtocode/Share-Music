@@ -1,15 +1,15 @@
-use crate::util::odesli::{OdesliResponse, Platform};
-use tracing::{debug, instrument, warn};
-use twilight_model::application::interaction::Interaction;
-use twilight_model::application::interaction::message_component::MessageComponentInteractionData;
-use twilight_model::channel::message::component::{
-    ActionRow, SelectMenu, SelectMenuOption, SelectMenuType,
-};
-use twilight_model::channel::message::Component;
 use crate::context::Ctx;
 use crate::handlers::interactions::messages;
 use crate::util::EmptyResult;
 use crate::util::interaction::respond_with;
+use crate::util::odesli::{OdesliResponse, Platform};
+use tracing::{debug, instrument, warn};
+use twilight_model::application::interaction::Interaction;
+use twilight_model::application::interaction::message_component::MessageComponentInteractionData;
+use twilight_model::channel::message::Component;
+use twilight_model::channel::message::component::{
+    ActionRow, SelectMenu, SelectMenuOption, SelectMenuType,
+};
 
 pub const SELECT_ID: &str = "odesli_select";
 
@@ -69,7 +69,11 @@ pub async fn handle(inter: Interaction, data: MessageComponentInteractionData, c
 }
 
 #[instrument(name = "select_show_player_handler", level = "debug", skip_all)]
-async fn handle_inner(inter: Interaction, data: MessageComponentInteractionData, context: Ctx) -> EmptyResult<()> {
+async fn handle_inner(
+    inter: Interaction,
+    data: MessageComponentInteractionData,
+    context: Ctx,
+) -> EmptyResult<()> {
     debug!("Received Show Player Select Menu Interaction");
 
     let Some(selected) = data.values.first() else {
@@ -83,7 +87,7 @@ async fn handle_inner(inter: Interaction, data: MessageComponentInteractionData,
         "lookup_Spotify" => find_link_for_platform(&inter, Platform::Spotify)?,
         "lookup_AmazonMusic" => find_link_for_platform(&inter, Platform::AmazonMusic)?,
         "lookup_YouTube" => find_link_for_platform(&inter, Platform::YouTube)?,
-        s => s
+        s => s,
     };
 
     debug!("Sending link to embed the player");
@@ -111,15 +115,16 @@ fn find_link_for_platform(inter: &Interaction, platform: Platform) -> EmptyResul
     let Some(link) = description
         .split(" | ")
         .filter_map(platform_and_link_from_link)
-        .find_map(|(plat, link)| {
-            if plat == platform {
-                Some(link)
-            } else {
-                None
-            }
-        })
+        .find_map(
+            |(plat, link)| {
+                if plat == platform { Some(link) } else { None }
+            },
+        )
     else {
-        warn!("No link found for platform {:?} in embed description", platform);
+        warn!(
+            "No link found for platform {:?} in embed description",
+            platform
+        );
         return Err(());
     };
 
@@ -127,8 +132,7 @@ fn find_link_for_platform(inter: &Interaction, platform: Platform) -> EmptyResul
 }
 
 fn platform_and_link_from_link(link: &str) -> Option<(Platform, &str)> {
-    let mut split_iter = link.split(&['[', ']', '(', ')'])
-        .filter(|s| !s.is_empty());
+    let mut split_iter = link.split(&['[', ']', '(', ')']).filter(|s| !s.is_empty());
 
     let platform = split_iter.next()?;
     let link = split_iter.next()?;

@@ -3,11 +3,11 @@
  * All Rights Reserved
  */
 
+use serde::{Deserialize, Deserializer, Serialize};
+use serde_json::Value;
 use std::collections::HashMap;
 use std::fmt;
 use std::fmt::{Display, Formatter};
-use serde::{Deserialize, Deserializer, Serialize};
-use serde_json::Value;
 use tracing::warn;
 
 #[derive(Debug, Serialize, Deserialize)]
@@ -51,14 +51,16 @@ pub struct EntityData {
 
 impl OdesliResponse {
     pub fn links(&self) -> Vec<(String, String)> {
-        self.links_by_platform.iter()
+        self.links_by_platform
+            .iter()
             .filter(|(platform, _)| !matches!(platform, Platform::Other(_)))
             .map(|(p, l)| (p.to_string(), l.url.clone()))
             .collect()
     }
 
     pub fn get_data(&self) -> EntityData {
-        let mut res= self.entities_by_unique_id
+        let mut res = self
+            .entities_by_unique_id
             .get(&self.entity_unique_id)
             .map(|e| EntityData {
                 title: e.title.clone(),
@@ -66,7 +68,10 @@ impl OdesliResponse {
                 thumbnail_url: e.thumbnail_url.clone(),
             })
             .unwrap_or_else(|| {
-                warn!("API returned response without data for original entity: {}", self.entity_unique_id);
+                warn!(
+                    "API returned response without data for original entity: {}",
+                    self.entity_unique_id
+                );
                 // Maybe some prioritized entity has data
                 EntityData {
                     title: None,

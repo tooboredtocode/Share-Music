@@ -3,15 +3,15 @@
  * All Rights Reserved
  */
 
-use lazy_regex::{lazy_regex, Lazy};
+use crate::context::Ctx;
+use crate::util::colour::{RGBPixel, get_dominant_colour};
+use crate::util::odesli::{ApiErr, EntityData, OdesliResponse, Platform, fetch_from_api};
+use lazy_regex::{Lazy, lazy_regex};
 use regex::Regex;
 use tracing::{debug, instrument};
 use twilight_util::builder::embed::{
     EmbedAuthorBuilder, EmbedBuilder, EmbedFooterBuilder, ImageSource,
 };
-use crate::context::Ctx;
-use crate::util::colour::{get_dominant_colour, RGBPixel};
-use crate::util::odesli::{fetch_from_api, ApiErr, EntityData, OdesliResponse, Platform};
 
 // language=RegExp
 pub static VALID_LINKS_REGEX: Lazy<Regex> = lazy_regex!(
@@ -63,7 +63,10 @@ pub fn additional_link_validation(link: &str) -> Result<(), InvalidLink> {
 }
 
 #[instrument(level = "debug", skip_all, fields(link = url))]
-pub async fn data_routine(url: &str, context: &Ctx) -> Result<(OdesliResponse, EntityData, Option<RGBPixel>), ApiErr> {
+pub async fn data_routine(
+    url: &str,
+    context: &Ctx,
+) -> Result<(OdesliResponse, EntityData, Option<RGBPixel>), ApiErr> {
     debug!("Fetching information from API");
     let mut data = fetch_from_api(url, context).await?;
     fix_platform_links(&mut data);
@@ -94,7 +97,9 @@ fn fix_platform_links(resp: &mut OdesliResponse) {
         let new = links.url.replace("geo.music.apple.com", "music.apple.com");
         let mut new_iter = new.split('?');
 
-        let new = new_iter.next().expect("A split should always return something");
+        let new = new_iter
+            .next()
+            .expect("A split should always return something");
         if let Some(query) = new_iter.next() {
             let song_id = query.split('&').find(|s| s.starts_with("i="));
             if let Some(song_id) = song_id {

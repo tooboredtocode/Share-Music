@@ -6,17 +6,19 @@
 use futures_util::future::try_join_all;
 use itertools::Itertools;
 use std::future::IntoFuture;
-use tracing::{debug, debug_span, instrument, warn, Instrument};
-use twilight_model::application::interaction::application_command::CommandData;
+use tracing::{Instrument, debug, debug_span, instrument, warn};
 use twilight_model::application::interaction::Interaction;
+use twilight_model::application::interaction::application_command::CommandData;
 
 use crate::context::Ctx;
-use crate::handlers::interactions::common::{additional_link_validation, build_embed, data_routine, VALID_LINKS_REGEX};
+use crate::handlers::interactions::common::{
+    VALID_LINKS_REGEX, additional_link_validation, build_embed, data_routine,
+};
 use crate::handlers::interactions::messages;
 use crate::handlers::interactions::messages::no_links_found;
-use crate::util::interaction::{defer, get_message, respond_with, update_defer_with_error};
 use crate::util::EmptyResult;
 use crate::util::error::expect_warn;
+use crate::util::interaction::{defer, get_message, respond_with, update_defer_with_error};
 
 pub async fn handle(inter: Interaction, data: CommandData, context: Ctx) {
     // use an inner function to make splitting the code easier
@@ -56,18 +58,15 @@ async fn handle_inner(inter: Interaction, data: CommandData, context: Ctx) -> Em
         Ok(data) => data,
         Err(e) => {
             warn!(failed_with = %e, "Failed to fetch data for some of the links");
-            update_defer_with_error(
-                &inter,
-                &context,
-                messages::error((&inter.locale).into())
-            ).await;
+            update_defer_with_error(&inter, &context, messages::error((&inter.locale).into()))
+                .await;
             return Err(());
         }
     };
 
-    let embeds = data.into_iter().map(|(data, entity, color)|
-        build_embed(&data, entity, color)
-    )
+    let embeds = data
+        .into_iter()
+        .map(|(data, entity, color)| build_embed(&data, entity, color))
         .map(|e| e.build())
         .collect_vec();
 

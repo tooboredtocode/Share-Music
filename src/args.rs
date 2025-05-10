@@ -2,8 +2,8 @@
  * Copyright (c) 2021-2025 tooboredtocode
  * All Rights Reserved
  */
-use std::path::PathBuf;
 use clap::{Parser, ValueEnum};
+use std::path::PathBuf;
 
 #[derive(Debug, Parser)]
 pub struct Args {
@@ -29,7 +29,7 @@ pub struct Args {
     /// The file with the (partial) color configuration for the bot in yaml format
     /// If no file is provided, the default color configuration will be used
     #[clap(long, env = "COLOR_CONFIG")]
-    pub color_config: Option<PathBuf>
+    pub color_config: Option<PathBuf>,
 }
 
 #[derive(Copy, Clone, PartialEq, Eq, Debug, ValueEnum)]

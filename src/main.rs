@@ -5,28 +5,29 @@
 
 #![allow(clippy::uninlined_format_args)]
 
+use crate::args::Args;
+use crate::color_config::ColorConfig;
+use crate::context::Context;
+use crate::context::{ClusterState, Ctx};
+use crate::util::shard_poller::ShardPoller;
+use crate::util::{EmptyResult, setup_logger};
 use std::time::Duration;
 use tokio::task::JoinSet;
 use tracing::{error, info, info_span};
 use twilight_gateway::Shard;
-use crate::args::Args;
-use crate::color_config::ColorConfig;
-use crate::context::{ClusterState, Ctx};
-use crate::context::Context;
-use crate::util::{setup_logger, EmptyResult};
-use crate::util::shard_poller::ShardPoller;
 
-mod commands;
 mod args;
+mod color_config;
+mod commands;
 mod constants;
 mod context;
 mod handlers;
 mod util;
-mod color_config;
 
 fn main() {
     let args = Args::parse();
-    let color_config = args.color_config
+    let color_config = args
+        .color_config
         .as_ref()
         .map(|path| ColorConfig::from_file(path))
         .unwrap_or_default();
@@ -77,14 +78,10 @@ async fn shard_main(mut shard: Shard, context: Ctx) -> EmptyResult<()> {
     let span = info_span!("shard", id = %shard.id());
 
     span.in_scope(|| info!("Shard is connecting..."));
-    while let Some(event) = shard_poller
-        .poll(&mut shard)
-        .await
-        .map_err(|_| {
-            span.in_scope(|| error!("Shard has been fatally closed"));
-            context.state.set(ClusterState::Crashing);
-        })?
-    {
+    while let Some(event) = shard_poller.poll(&mut shard).await.map_err(|_| {
+        span.in_scope(|| error!("Shard has been fatally closed"));
+        context.state.set(ClusterState::Crashing);
+    })? {
         match event {
             Ok(event) => {
                 // everything is wrapped in the handlers module

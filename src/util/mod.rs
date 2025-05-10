@@ -13,8 +13,8 @@ pub mod error;
 pub mod interaction;
 pub mod odesli;
 pub mod setup_logger;
-pub mod signal;
 pub mod shard_poller;
+pub mod signal;
 
 pub use error::EmptyResult;
 

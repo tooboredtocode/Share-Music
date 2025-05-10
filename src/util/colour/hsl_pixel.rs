@@ -26,11 +26,7 @@ impl Rgb {
             (Self::Green, g)
         };
 
-        if val < b {
-            (min, val)
-        } else {
-            (Self::Blue, b)
-        }
+        if val < b { (min, val) } else { (Self::Blue, b) }
     }
 
     fn from_max(r: f32, g: f32, b: f32) -> (Self, f32) {
@@ -40,11 +36,7 @@ impl Rgb {
             (Self::Green, g)
         };
 
-        if val > b {
-            (max, val)
-        } else {
-            (Self::Blue, b)
-        }
+        if val > b { (max, val) } else { (Self::Blue, b) }
     }
 }
 

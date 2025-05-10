@@ -8,13 +8,13 @@ use std::fmt::{Display, Formatter};
 use std::time::Instant;
 
 use reqwest::Method;
-use tracing::{instrument, Instrument};
+use tracing::{Instrument, instrument};
 
 pub use api_type::*;
 pub use error::ApiErr;
 
-use crate::context::metrics::ThirdPartyLabels;
 use crate::context::Ctx;
+use crate::context::metrics::ThirdPartyLabels;
 
 mod api_type;
 mod error;
@@ -60,7 +60,10 @@ impl Display for OdesliEndpoints {
 }
 
 #[instrument(level = "debug", skip_all)]
-pub async fn fetch_from_api(url: impl Into<String>, context: &Ctx) -> Result<OdesliResponse, ApiErr> {
+pub async fn fetch_from_api(
+    url: impl Into<String>,
+    context: &Ctx,
+) -> Result<OdesliResponse, ApiErr> {
     let req_data = OdesliEndpoints::links(url);
 
     let req = context

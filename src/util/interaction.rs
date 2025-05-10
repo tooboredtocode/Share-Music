@@ -6,28 +6,27 @@ use std::future::IntoFuture;
 use std::time::Duration;
 use tokio::task::JoinHandle;
 use tokio::time;
-use tracing::{debug_span, warn, Instrument};
-use twilight_model::application::interaction::application_command::CommandData;
+use tracing::{Instrument, debug_span, warn};
 use twilight_model::application::interaction::Interaction;
-use twilight_model::channel::message::MessageFlags;
+use twilight_model::application::interaction::application_command::CommandData;
 use twilight_model::channel::Message;
+use twilight_model::channel::message::MessageFlags;
 use twilight_model::http::interaction::{InteractionResponse, InteractionResponseType};
 use twilight_util::builder::InteractionResponseDataBuilder;
 
 use crate::commands::sync_commands;
 use crate::context::{ClusterState, Ctx};
-use crate::util::{create_termination_future, EmptyResult};
 use crate::util::error::expect_warn;
+use crate::util::{EmptyResult, create_termination_future};
 
 pub async fn get_options<'a, T>(data: &'a CommandData, context: &Ctx) -> EmptyResult<T>
 where
     T: TryFrom<&'a CommandData>,
     T::Error: std::error::Error + Send + Sync + 'static,
 {
-    let res: T = match data
-        .try_into()
-        .map_err(expect_warn!("Received Invalid Interaction data, re-syncing commands"))
-    {
+    let res: T = match data.try_into().map_err(expect_warn!(
+        "Received Invalid Interaction data, re-syncing commands"
+    )) {
         Ok(s) => s,
         Err(()) => {
             if sync_commands(context).await.is_err() {
@@ -124,7 +123,7 @@ pub async fn update_defer_with_error(inter: &Interaction, context: &Ctx, msg: &s
                 Duration::from_secs(15),
                 create_termination_future(&ctx.state),
             )
-                .await;
+            .await;
 
             ctx.interaction_client()
                 .delete_response(inter_token.as_str())

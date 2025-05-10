@@ -5,20 +5,20 @@
 use std::cmp::max;
 use std::sync::Arc;
 
-use prometheus_client::encoding::EncodeLabelValue;
-use reqwest::Client;
-use this_state::State as ThisState;
-use tracing::{error, info};
-use twilight_gateway::{Shard, ConfigBuilder as ShardConfigBuilder, create_iterator};
-use twilight_http::Client as TwilightClient;
-use twilight_model::id::marker::ApplicationMarker;
-use twilight_model::id::Id;
 use crate::color_config::ColorConfig;
 use crate::constants::cluster_consts;
 use crate::context::metrics::Metrics;
 use crate::util::EmptyResult;
-use crate::util::signal::start_signal_listener;
 use crate::util::error::expect_err;
+use crate::util::signal::start_signal_listener;
+use prometheus_client::encoding::EncodeLabelValue;
+use reqwest::Client;
+use this_state::State as ThisState;
+use tracing::{error, info};
+use twilight_gateway::{ConfigBuilder as ShardConfigBuilder, Shard, create_iterator};
+use twilight_http::Client as TwilightClient;
+use twilight_model::id::Id;
+use twilight_model::id::marker::ApplicationMarker;
 
 mod discord_client;
 mod http_client;
@@ -72,7 +72,9 @@ pub type Ctx = Arc<Context>;
 
 impl Context {
     pub async fn new(
-        token: &str, debug_servers: &[u64], color_config: ColorConfig
+        token: &str,
+        debug_servers: &[u64],
+        color_config: ColorConfig,
     ) -> EmptyResult<(Arc<Self>, impl ExactSizeIterator<Item = Shard>)> {
         info!("Creating Cluster");
 
@@ -96,12 +98,8 @@ impl Context {
         start_signal_listener(state.clone());
 
         let (discord_client, bot_id) = Self::discord_client_from_config(token).await?;
-        let discord_shards = Self::create_shards(
-            &discord_client,
-            token,
-            cluster_id,
-            cluster_count,
-        ).await?;
+        let discord_shards =
+            Self::create_shards(&discord_client, token, cluster_id, cluster_count).await?;
 
         let http_client = Self::create_http_client()?;
 
@@ -128,24 +126,26 @@ impl Context {
         cluster_count: u16,
     ) -> EmptyResult<impl ExactSizeIterator<Item = Shard> + use<>> {
         if cluster_id >= cluster_count {
-            error!("Cluster ID ({}) must be smaller than the number of clusters ({})", cluster_id, cluster_count);
-            return Err(())
+            error!(
+                "Cluster ID ({}) must be smaller than the number of clusters ({})",
+                cluster_id, cluster_count
+            );
+            return Err(());
         }
 
         let request = client.gateway().authed();
-        let response = request.await
+        let response = request
+            .await
             .map_err(expect_err!("Failed to get recommended number of shards"))?;
         let info = response
             .model()
             .await
             .map_err(expect_err!("Failed to get recommended number of shards"))?;
 
-        let shard_config = ShardConfigBuilder::new(
-            token.to_string(),
-            cluster_consts::GATEWAY_INTENTS,
-        )
-            .presence(cluster_consts::presence())
-            .build();
+        let shard_config =
+            ShardConfigBuilder::new(token.to_string(), cluster_consts::GATEWAY_INTENTS)
+                .presence(cluster_consts::presence())
+                .build();
 
         let cluster_id = cluster_id as u32;
         let cluster_count = cluster_count as u32;
@@ -153,11 +153,8 @@ impl Context {
 
         let iter = (cluster_id..total).step_by(cluster_count as usize);
 
-        Ok(create_iterator(
-            iter,
-            total,
-            shard_config,
-            |_, builder| builder.build()
-        ))
+        Ok(create_iterator(iter, total, shard_config, |_, builder| {
+            builder.build()
+        }))
     }
 }

@@ -13,8 +13,8 @@ use prometheus_client::metrics::{
 use prometheus_client::registry::{Registry, Unit};
 use std::borrow::Cow;
 use std::collections::HashMap;
-use std::sync::atomic::AtomicU64;
 use std::sync::Arc;
+use std::sync::atomic::AtomicU64;
 use tracing::warn;
 use twilight_gateway::{Shard, ShardState};
 use twilight_model::gateway::event::Event;
@@ -164,11 +164,9 @@ impl Metrics {
         r.register("cluster_state", "Cluster state", cluster_state.clone());
 
         let third_party_api = Family::<ThirdPartyLabels, Histogram>::new_with_constructor(|| {
-            Histogram::new(
-                [
-                    0.1, 0.15, 0.2, 0.3, 0.5, 0.75, 1.0, 1.5, 2.0, 3.0, 5.0, 7.5, 10.0, 15.0, 20.0,
-                ],
-            )
+            Histogram::new([
+                0.1, 0.15, 0.2, 0.3, 0.5, 0.75, 1.0, 1.5, 2.0, 3.0, 5.0, 7.5, 10.0, 15.0, 20.0,
+            ])
         });
         r.register(
             "3rd_party_api_request_duration_seconds",

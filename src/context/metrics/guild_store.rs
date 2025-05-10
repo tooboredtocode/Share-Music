@@ -11,8 +11,8 @@ use prometheus_client::encoding::EncodeLabelValue;
 use twilight_model::gateway::event::Event;
 use twilight_model::gateway::payload::incoming::{GuildCreate, GuildDelete, Ready};
 
-use crate::context::metrics::GuildLabels;
 use crate::context::Ctx;
+use crate::context::metrics::GuildLabels;
 
 #[derive(Copy, Clone, Debug, Hash, PartialEq, Eq, EncodeLabelValue)]
 pub enum GuildState {

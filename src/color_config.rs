@@ -2,9 +2,9 @@
  * Copyright (c) 2021-2025 tooboredtocode
  * All Rights Reserved
  */
+use serde::Deserialize;
 use std::path::Path;
 use std::process::exit;
-use serde::Deserialize;
 
 #[derive(Copy, Clone, Debug, Deserialize)]
 pub struct ColorConfig {

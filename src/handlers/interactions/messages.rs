@@ -56,7 +56,9 @@ pub const fn youtube_shorts_not_supported(locale: DiscordLocale) -> &'static str
         DiscordLocale::German => {
             "Leider unterstütze ich keine YouTube Shorts, bitte teile einen einzelnen Song oder ein Album"
         }
-        _ => "Unfortunately, I don't support YouTube Shorts, please share a single song or album instead"
+        _ => {
+            "Unfortunately, I don't support YouTube Shorts, please share a single song or album instead"
+        }
     }
 }
 
@@ -77,7 +79,9 @@ pub const fn error(locale: DiscordLocale) -> &'static str {
             "Ein unerwarteter Fehler ist aufgetreten, wenn du sicher bist, dass du einen gültigen Link geteilt hast, versuche es später erneut\n\
             -# Wenn das Problem weiterhin besteht, öffne einen Report [hier](<https://github.com/tooboredtocode/Share-Music/issues>)"
         }
-        _ => "An unexpected error occurred, if you are sure you shared a valid link, please try again later\n\
+        _ => {
+            "An unexpected error occurred, if you are sure you shared a valid link, please try again later\n\
              -# If the issue persists, open an issue [here](<https://github.com/tooboredtocode/Share-Music/issues>)"
+        }
     }
 }

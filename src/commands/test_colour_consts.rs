@@ -5,10 +5,10 @@
 
 use tracing::debug;
 use twilight_model::application::command::{Command, CommandOptionType, CommandType};
+use twilight_model::application::interaction::InteractionContextType;
 use twilight_model::application::interaction::application_command::{
     CommandData, CommandOptionValue,
 };
-use twilight_model::application::interaction::InteractionContextType;
 use twilight_model::oauth::ApplicationIntegrationType;
 use twilight_util::builder::command::{CommandBuilder, NumberBuilder, StringBuilder};
 
@@ -58,13 +58,11 @@ pub fn command() -> Command {
         .option(percent_factor_option())
         .option(saturation_factor_option())
         .option(luminosity_factor_option())
-        .integration_types([
-            ApplicationIntegrationType::GuildInstall,
-        ])
+        .integration_types([ApplicationIntegrationType::GuildInstall])
         .contexts([
             InteractionContextType::Guild,
             InteractionContextType::BotDm,
-            InteractionContextType::PrivateChannel
+            InteractionContextType::PrivateChannel,
         ])
         .build()
 }
@@ -109,7 +107,7 @@ impl TryFrom<&CommandData> for TestConstsCommandData {
                         name: URL_OPTION_NAME,
                         expected: CommandOptionType::String,
                         got: other_type,
-                    })
+                    });
                 }
                 (BRIGHTEST_PERCENT_OPTION_NAME, CommandOptionValue::Number(val)) => {
                     brightest_percent_option = Some(val)
@@ -119,7 +117,7 @@ impl TryFrom<&CommandData> for TestConstsCommandData {
                         name: BRIGHTEST_PERCENT_OPTION_NAME,
                         expected: CommandOptionType::Number,
                         got: other_type,
-                    })
+                    });
                 }
                 (PERCENT_FACTOR_OPTION_NAME, CommandOptionValue::Number(val)) => {
                     percent_factor_option = Some(val)
@@ -129,7 +127,7 @@ impl TryFrom<&CommandData> for TestConstsCommandData {
                         name: PERCENT_FACTOR_OPTION_NAME,
                         expected: CommandOptionType::Number,
                         got: other_type,
-                    })
+                    });
                 }
                 (SATURATION_FACTOR_OPTION_NAME, CommandOptionValue::Number(val)) => {
                     saturation_factor_option = Some(val)
@@ -139,7 +137,7 @@ impl TryFrom<&CommandData> for TestConstsCommandData {
                         name: SATURATION_FACTOR_OPTION_NAME,
                         expected: CommandOptionType::Number,
                         got: other_type,
-                    })
+                    });
                 }
                 (LUMINOSITY_FACTOR_OPTION_NAME, CommandOptionValue::Number(val)) => {
                     luminosity_factor_option = Some(val)
@@ -149,7 +147,7 @@ impl TryFrom<&CommandData> for TestConstsCommandData {
                         name: LUMINOSITY_FACTOR_OPTION_NAME,
                         expected: CommandOptionType::Number,
                         got: other_type,
-                    })
+                    });
                 }
                 _ => {}
             }

@@ -5,10 +5,10 @@
 
 use tracing::debug;
 use twilight_model::application::command::{Command, CommandOptionType, CommandType};
+use twilight_model::application::interaction::InteractionContextType;
 use twilight_model::application::interaction::application_command::{
     CommandData, CommandOptionValue,
 };
-use twilight_model::application::interaction::InteractionContextType;
 use twilight_model::oauth::ApplicationIntegrationType;
 use twilight_util::builder::command::{CommandBuilder, StringBuilder};
 
@@ -42,12 +42,12 @@ pub fn command() -> Command {
     .option(url_option())
     .integration_types([
         ApplicationIntegrationType::GuildInstall,
-        ApplicationIntegrationType::UserInstall
+        ApplicationIntegrationType::UserInstall,
     ])
     .contexts([
         InteractionContextType::Guild,
         InteractionContextType::BotDm,
-        InteractionContextType::PrivateChannel
+        InteractionContextType::PrivateChannel,
     ])
     .build()
 }
@@ -72,7 +72,7 @@ impl TryFrom<&CommandData> for ShareCommandData {
                         name: URL_OPTION_NAME,
                         expected: CommandOptionType::String,
                         got: other_type,
-                    })
+                    });
                 }
                 _ => {}
             }

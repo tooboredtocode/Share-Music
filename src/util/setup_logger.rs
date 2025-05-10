@@ -3,9 +3,9 @@
  * All Rights Reserved
  */
 
+use crate::args::LogFormat;
 use tracing::Level;
 use tracing_subscriber::EnvFilter;
-use crate::args::LogFormat;
 
 pub fn setup(env_filter: &str, log_format: LogFormat) {
     let filter = EnvFilter::builder()

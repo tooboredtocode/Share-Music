@@ -3,11 +3,11 @@
  * All Rights Reserved
  */
 
-use image::imageops::FilterType;
 use image::DynamicImage;
+use image::imageops::FilterType;
 use std::borrow::Cow;
 use std::time::Instant;
-use tracing::{debug, debug_span, instrument, Instrument};
+use tracing::{Instrument, debug, debug_span, instrument};
 use url::Host;
 
 use hsl_pixel::HslPixel;
@@ -15,8 +15,8 @@ use pixel_group::PixelGroup;
 pub use rgb_pixel::RGBPixel;
 
 use crate::constants::colour_consts;
-use crate::context::metrics::{Method, ThirdPartyLabels};
 use crate::context::Ctx;
+use crate::context::metrics::{Method, ThirdPartyLabels};
 use crate::util::EmptyResult;
 use crate::util::error::expect_warn;
 
@@ -136,8 +136,9 @@ async fn fetch_image(url: &String, context: &Ctx) -> EmptyResult<DynamicImage> {
         .bytes()
         .await
         .map_err(expect_warn!("Failed to read thumbnail bytes"));
-    let mut img = image::load_from_memory(bytes.as_deref().unwrap_or(EMPTY))
-        .map_err(expect_warn!("Failed to parse image, url may have pointed to a file that wasn't an image"))?;
+    let mut img = image::load_from_memory(bytes.as_deref().unwrap_or(EMPTY)).map_err(
+        expect_warn!("Failed to parse image, url may have pointed to a file that wasn't an image"),
+    )?;
 
     if (colour_consts::MAX_IMAGE_SIZE < img.width())
         | (colour_consts::MAX_IMAGE_SIZE < img.height())

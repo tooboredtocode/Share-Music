@@ -2,17 +2,17 @@
  * Copyright (c) 2021-2025 tooboredtocode
  * All Rights Reserved
  */
+use crate::context::metrics::metrics_handler;
+use crate::context::{ClusterState, Context};
+use crate::util::error::expect_err;
+use crate::util::{EmptyResult, create_termination_future};
+use axum::Router;
+use axum::extract::State as AxumState;
+use axum::http::StatusCode;
+use axum::routing::get;
 use std::net::SocketAddr;
 use std::sync::Arc;
-use axum::http::StatusCode;
-use axum::extract::State as AxumState;
-use axum::Router;
-use axum::routing::get;
 use tracing::info;
-use crate::context::{ClusterState, Context};
-use crate::context::metrics::metrics_handler;
-use crate::util::{create_termination_future, EmptyResult};
-use crate::util::error::expect_err;
 
 pub async fn ready_handler(AxumState(context): AxumState<Arc<Context>>) -> (StatusCode, String) {
     match context.state.get() {
