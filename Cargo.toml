@@ -1,6 +1,6 @@
 [package]
 name = "share-music"
-version = "3.6.2"
+version = "3.6.3"
 edition = "2024"
 publish = false
 build = "build.rs"
