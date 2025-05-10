@@ -4,7 +4,7 @@
  */
 
 use axum::extract::State as AxumState;
-use axum::http::{Method as HttpMethod, StatusCode};
+use axum::http::StatusCode;
 use parking_lot::Mutex;
 use prometheus_client::encoding::{EncodeLabelSet, EncodeLabelValue};
 use prometheus_client::metrics::{
@@ -13,18 +13,15 @@ use prometheus_client::metrics::{
 use prometheus_client::registry::{Registry, Unit};
 use std::borrow::Cow;
 use std::collections::HashMap;
-use std::net::SocketAddr;
 use std::sync::atomic::AtomicU64;
 use std::sync::Arc;
-use tracing::{info, warn};
+use tracing::warn;
 use twilight_gateway::{Shard, ShardState};
 use twilight_model::gateway::event::Event;
 
 use crate::constants::{GIT_BRANCH, GIT_REVISION, NAME, RUST_VERSION, VERSION};
 use crate::context::metrics::guild_store::{GuildState, GuildStore};
 use crate::context::{ClusterState, Context, Ctx};
-use crate::util::{create_termination_future, EmptyResult};
-use crate::util::error::expect_err;
 
 mod guild_store;
 
@@ -257,18 +254,8 @@ fn shard_status_to_string(status: ShardState) -> String {
     .to_string()
 }
 
-async fn metrics_handler(
-    AxumState(context): AxumState<Arc<Context>>,
-    method: HttpMethod,
-) -> (StatusCode, String) {
+pub async fn metrics_handler(AxumState(context): AxumState<Arc<Context>>) -> (StatusCode, String) {
     use prometheus_client::encoding::text::encode;
-
-    if method != HttpMethod::GET {
-        return (
-            StatusCode::METHOD_NOT_ALLOWED,
-            String::from("Method not allowed"),
-        );
-    }
 
     let mut buffer = String::new();
     match encode(&mut buffer, &context.metrics.registry) {
@@ -280,35 +267,5 @@ async fn metrics_handler(
                 format!("Failed to encode metrics: {}", e),
             )
         }
-    }
-}
-
-impl Context {
-    pub async fn start_metrics_server(self: &Arc<Self>, port: u16) -> EmptyResult<()> {
-        use axum::handler::Handler;
-
-        let app = metrics_handler.with_state(self.clone());
-
-        let addr: SocketAddr = ([0, 0, 0, 0], port).into();
-        let listener = tokio::net::TcpListener::bind(addr)
-            .await
-            .map_err(expect_err!("Failed to bind to metrics address"))?;
-
-        let state = self.clone();
-        let termination_future = create_termination_future(&self.state);
-
-        info!("Starting Metrics Server");
-        tokio::spawn(async move {
-            let res = axum::serve(listener, app)
-                .with_graceful_shutdown(termination_future)
-                .await
-                .map_err(expect_err!("Metrics server crashed"));
-
-            if res.is_err() {
-                state.state.set(ClusterState::Crashing)
-            }
-        });
-
-        Ok(())
     }
 }

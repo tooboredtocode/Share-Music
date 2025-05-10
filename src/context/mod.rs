@@ -23,6 +23,7 @@ use crate::util::error::expect_err;
 mod discord_client;
 mod http_client;
 pub mod metrics;
+mod status_server;
 
 #[derive(Copy, Clone, Debug, Hash, PartialEq, Eq, EncodeLabelValue)]
 pub enum ClusterState {

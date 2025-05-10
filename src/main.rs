@@ -49,7 +49,7 @@ async fn async_main(args: Args, color_config: ColorConfig) -> EmptyResult<()> {
     info!("{} v{} initializing!", constants::NAME, constants::VERSION);
 
     let (context, shards) = Context::new(&args.token, &args.debug_server, color_config).await?;
-    context.start_metrics_server(args.metrics_port).await?;
+    context.start_status_server(args.metrics_port).await?;
     commands::sync_commands(&context).await?;
 
     info!("Cluster connecting to discord...");
@@ -62,17 +62,13 @@ async fn async_main(args: Args, color_config: ColorConfig) -> EmptyResult<()> {
     }
 
     while let Some(res) = shard_tasks.join_next().await {
-        match res {
-            Ok(Ok(())) => continue,
-            Ok(Err(())) => return Err(()),
-            Err(err) => {
-                error!("Shard task panicked: {}", err);
-                context.state.set(ClusterState::Crashing);
-            }
+        if let Err(err) = res {
+            error!("Shard task panicked: {}", err);
+            context.state.set(ClusterState::Crashing);
         }
     }
 
-    info!("All shard tasks have exited");
+    info!("All shard tasks have been joined, exiting main loop");
     Ok(())
 }
 
