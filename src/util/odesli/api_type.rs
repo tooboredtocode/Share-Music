@@ -83,8 +83,8 @@ impl OdesliResponse {
         let mut curr_max = APIProvider::min_prio();
         let max_prio = self
             .entities_by_unique_id
-            .iter()
-            .map(|(_, e)| e.api_provider.prio())
+            .values()
+            .map(|e| e.api_provider.prio())
             .min()
             .unwrap_or(APIProvider::max_prio());
 
@@ -273,7 +273,7 @@ impl APIProvider {
 
     const fn prio(&self) -> u8 {
         match self {
-            APIProvider::iTunes => Self::max_prio() - 0,
+            APIProvider::iTunes => Self::max_prio(),
             APIProvider::Spotify => Self::max_prio() - 1,
             APIProvider::Tidal => Self::max_prio() - 2,
             APIProvider::Amazon => Self::max_prio() - 3,
