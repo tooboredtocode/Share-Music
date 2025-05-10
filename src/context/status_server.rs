@@ -14,7 +14,7 @@ use crate::context::metrics::metrics_handler;
 use crate::util::{create_termination_future, EmptyResult};
 use crate::util::error::expect_err;
 
-pub async fn health_handler(AxumState(context): AxumState<Arc<Context>>) -> (StatusCode, String) {
+pub async fn ready_handler(AxumState(context): AxumState<Arc<Context>>) -> (StatusCode, String) {
     match context.state.get() {
         ClusterState::Starting => (StatusCode::SERVICE_UNAVAILABLE, "Starting".to_string()),
         ClusterState::Running => (StatusCode::OK, "ok".to_string()),
@@ -27,8 +27,8 @@ impl Context {
     pub async fn start_status_server(self: &Arc<Self>, port: u16) -> EmptyResult<()> {
         let app = Router::new()
             .route("/metrics", get(metrics_handler))
-            .route("/readyz", get(|| async { "ok" }))
-            .route("/healthz", get(health_handler))
+            .route("/healthz", get(|| async { "ok" }))
+            .route("/readyz", get(ready_handler))
             .with_state(self.clone());
 
         let addr: SocketAddr = ([0, 0, 0, 0], port).into();
