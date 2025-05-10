@@ -3,6 +3,8 @@
  * All Rights Reserved
  */
 
+#![allow(clippy::uninlined_format_args)]
+
 use std::time::Duration;
 use tokio::task::JoinSet;
 use tracing::{error, info, info_span};

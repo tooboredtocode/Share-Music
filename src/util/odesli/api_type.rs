@@ -6,9 +6,9 @@
 use std::collections::HashMap;
 use std::fmt;
 use std::fmt::{Display, Formatter};
-
 use serde::{Deserialize, Deserializer, Serialize};
 use serde_json::Value;
+use tracing::warn;
 
 #[derive(Debug, Serialize, Deserialize)]
 #[serde(rename_all = "camelCase")]
@@ -58,50 +58,60 @@ impl OdesliResponse {
     }
 
     pub fn get_data(&self) -> EntityData {
+        let mut res= self.entities_by_unique_id
+            .get(&self.entity_unique_id)
+            .map(|e| EntityData {
+                title: e.title.clone(),
+                artist_name: e.artist_name.clone(),
+                thumbnail_url: e.thumbnail_url.clone(),
+            })
+            .unwrap_or_else(|| {
+                warn!("API returned response without data for original entity: {}", self.entity_unique_id);
+                // Maybe some prioritized entity has data
+                EntityData {
+                    title: None,
+                    artist_name: None,
+                    thumbnail_url: None,
+                }
+            });
+
         let mut curr_max = APIProvider::min_prio();
-        let max = self
+        let max_prio = self
             .entities_by_unique_id
             .iter()
-            .map(|(id, e)| e.api_provider.prio(&self.entity_unique_id == id))
+            .map(|(_, e)| e.api_provider.prio())
             .min()
             .unwrap_or(APIProvider::max_prio());
 
-        let mut res = EntityData {
-            title: None,
-            artist_name: None,
-            thumbnail_url: None,
-        };
+        for entity in self.entities_by_unique_id.values() {
+            let prio = entity.api_provider.prio();
+            if prio <= curr_max {
+                continue;
+            }
 
-        for (entity_id, entity) in &self.entities_by_unique_id {
-            let prio = entity
-                .api_provider
-                .prio(&self.entity_unique_id == entity_id);
+            let Entity {
+                title,
+                artist_name,
+                thumbnail_url,
+                ..
+            } = entity;
 
-            if prio < curr_max {
-                let Entity {
-                    title,
-                    artist_name,
-                    thumbnail_url,
-                    ..
-                } = entity;
+            if [title, artist_name, thumbnail_url]
+                .iter()
+                .any(|i| i.is_none())
+            {
+                continue;
+            }
 
-                if [title, artist_name, thumbnail_url]
-                    .iter()
-                    .all(|i| i.is_some())
-                {
-                    res = EntityData {
-                        title: title.clone(),
-                        artist_name: artist_name.clone(),
-                        thumbnail_url: thumbnail_url.clone(),
-                    }
-                } else {
-                    continue;
-                }
+            res = EntityData {
+                title: title.clone(),
+                artist_name: artist_name.clone(),
+                thumbnail_url: thumbnail_url.clone(),
+            };
 
-                curr_max = prio;
-                if curr_max == max {
-                    break;
-                }
+            curr_max = prio;
+            if curr_max == max_prio {
+                break;
             }
         }
 
@@ -247,24 +257,23 @@ pub enum APIProvider {
 
 impl APIProvider {
     #[inline]
-    fn max_prio() -> usize {
-        0
+    const fn max_prio() -> u8 {
+        u8::MAX
     }
 
     #[inline]
-    fn min_prio() -> usize {
-        usize::MAX
+    const fn min_prio() -> u8 {
+        0
     }
 
-    fn prio(&self, is_orig_provider: bool) -> usize {
+    const fn prio(&self) -> u8 {
         match self {
-            APIProvider::iTunes => 0,
-            APIProvider::Spotify => 1,
-            APIProvider::Tidal => 2,
-            APIProvider::Amazon => 3,
-            APIProvider::Deezer => 4,
-            APIProvider::Google => 5,
-            _ if is_orig_provider => Self::min_prio() - 1,
+            APIProvider::iTunes => Self::max_prio() - 0,
+            APIProvider::Spotify => Self::max_prio() - 1,
+            APIProvider::Tidal => Self::max_prio() - 2,
+            APIProvider::Amazon => Self::max_prio() - 3,
+            APIProvider::Deezer => Self::max_prio() - 4,
+            APIProvider::Google => Self::max_prio() - 5,
             _ => Self::min_prio(),
         }
     }
