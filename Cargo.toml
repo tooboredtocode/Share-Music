@@ -22,9 +22,9 @@ tokio = { version = "1.48", features = ["full"] }
 this-state = "0.3"
 tracing = "0.1"
 tracing-subscriber = { version = "0.3", features = ["json", "parking_lot", "registry", "env-filter"] }
-twilight-gateway = "0.16"
-twilight-http = "0.16"
-twilight-model = "0.16"
-twilight-util = { version = "0.16", features = ["builder", "permission-calculator"] }
+twilight-gateway = "0.17"
+twilight-http = "0.17"
+twilight-model = "0.17"
+twilight-util = { version = "0.17", features = ["builder", "permission-calculator"] }
 url = "2.5"
 serde_yaml = "0.9.34"  # 0.9.34+deprecated
