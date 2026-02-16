@@ -12,7 +12,7 @@ futures-util = { default-features = false, version = "0.3" }
 reqwest = { version = "0.12", default-features = false, features = ["rustls-tls-native-roots", "http2", "charset", "json"] }
 image = "0.25"
 itertools = "0.14"
-lazy-regex = "3.5"
+lazy-regex = "3.6"
 parking_lot = "0.12"
 prometheus-client = "0.24"
 regex = "1.12"
