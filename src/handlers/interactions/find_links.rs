@@ -10,10 +10,11 @@ use tracing::{Instrument, debug, debug_span, instrument, warn};
 use twilight_model::application::interaction::Interaction;
 use twilight_model::application::interaction::application_command::CommandData;
 use twilight_model::channel::message::MessageFlags;
+use url::Url;
 
 use crate::context::Ctx;
 use crate::handlers::interactions::common::{
-    VALID_LINKS_REGEX, additional_link_validation, build_components, data_routine,
+    VALID_DOMAINS_REGEX, additional_link_validation, build_components, data_routine,
 };
 use crate::handlers::interactions::messages;
 use crate::handlers::interactions::messages::no_links_found;
@@ -32,12 +33,14 @@ async fn handle_inner(inter: Interaction, data: CommandData, context: Ctx) -> Em
 
     let msg = get_message(&data)?;
 
-    let links: Vec<String> = VALID_LINKS_REGEX
-        .find_iter(msg.content.as_str())
-        .take(10)
-        .map(|m| m.as_str().to_string())
-        .unique()
-        .filter(|s| additional_link_validation(s).is_ok())
+    let links: Vec<Url> = msg
+        .content
+        .as_str()
+        .split_whitespace()
+        .filter(|s| s.starts_with("http://") || s.starts_with("https://"))
+        .filter_map(|s| Url::parse(s).ok())
+        .filter(|url| VALID_DOMAINS_REGEX.is_match(url.domain().unwrap_or_default()))
+        .filter(|url| additional_link_validation(url).is_ok())
         .take(5)
         .collect();
 

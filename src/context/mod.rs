@@ -6,18 +6,18 @@
 use crate::color_config::ColorConfig;
 use crate::constants::cluster_consts;
 use crate::context::metrics::Metrics;
-use crate::util::EmptyResult;
 use crate::util::colour::ImageClient;
 use crate::util::error::expect_err;
 use crate::util::odesli::OdesliClient;
 use crate::util::signal::start_signal_listener;
+use crate::util::{EmptyResult, create_termination_future};
 use prometheus_client::encoding::EncodeLabelValue;
 use reqwest::Client;
 use std::cmp::max;
 use std::sync::Arc;
 use std::time::Duration;
 use this_state::State as ThisState;
-use tracing::{error, info};
+use tracing::{error, info, instrument};
 use twilight_gateway::{ConfigBuilder as ShardConfigBuilder, Shard, create_iterator};
 use twilight_http::Client as TwilightClient;
 use twilight_model::id::Id;
@@ -123,7 +123,30 @@ impl Context {
         }
         .into();
 
+        ctx.start_odesli_cache_cleanup_task();
+
         Ok((ctx, discord_shards))
+    }
+
+    #[instrument(skip_all, name = "Context::cache_cleanup_task")]
+    fn start_odesli_cache_cleanup_task(self: &Arc<Self>) {
+        let this = Arc::clone(self);
+        tokio::spawn(async move {
+            let cleanup_interval = Duration::from_mins(15);
+            let cache_entry_max_age = Duration::from_hours(3);
+
+            loop {
+                tokio::select! {
+                    _ = create_termination_future(&this.state) => {
+                        break;
+                    },
+                    _ = tokio::time::sleep(cleanup_interval) => {
+                        info!("Running Odesli cache cleanup task");
+                        this.odesli_client.clear_expired_cache_entries(cache_entry_max_age);
+                    }
+                }
+            }
+        });
     }
 
     async fn create_shards(

@@ -15,25 +15,26 @@ use twilight_model::channel::message::component::UnfurledMediaItem;
 use twilight_util::builder::message::{
     ContainerBuilder, SectionBuilder, TextDisplayBuilder, ThumbnailBuilder,
 };
+use url::Url;
 
 // language=RegExp
-pub static VALID_LINKS_REGEX: Lazy<Regex> = lazy_regex!(
+pub static VALID_DOMAINS_REGEX: Lazy<Regex> = lazy_regex!(
     r#"(?x)
-    (?:http|https)://
     .* # match all potential subdomains cause shit sucks
     (?:
         music\.amazon\.com| # Amazon
+        play\.anghami\.com| # Anghami
         deezer\.(?:page\.link|com)| # Deezer
         music\.apple\.com| # Apple Music & iTunes
+        napster\.com| # Napster
         pandora\.com| # Pandora Music
         soundcloud\.com| # Soundcloud
         spotify\.com| # Spotify
         tidal\.com| # Tidal
-        music\.yandex\.com| # Yandex
+        music\.yandex\.(?:ru|com)| # Yandex
         youtu(?:\.be|be\.com)| # YouTube (Music)
         play\.google\.com # Google Store
-    )
-    \S*
+    )$
 "#
 );
 
@@ -49,25 +50,25 @@ pub enum InvalidLink {
     YoutubeShort,
 }
 
-pub fn additional_link_validation(link: &str) -> Result<(), InvalidLink> {
-    if link.contains("/playlist") {
+pub fn additional_link_validation(link: &Url) -> Result<(), InvalidLink> {
+    if link.path().contains("/playlist") {
         return Err(InvalidLink::Playlist);
     }
 
-    if link.contains("/artist") {
+    if link.path().contains("/artist") {
         return Err(InvalidLink::Artist);
     }
 
-    if link.contains("youtube.com/shorts") {
+    if link.as_str().contains("youtube.com/shorts") {
         return Err(InvalidLink::YoutubeShort);
     }
 
     Ok(())
 }
 
-#[instrument(level = "debug", skip_all, fields(link = url))]
+#[instrument(level = "debug", skip_all, fields(link = %url))]
 pub async fn data_routine(
-    url: &str,
+    url: &Url,
     context: &Ctx,
 ) -> Result<(OdesliResponse, EntityData, Option<RGBPixel>), ApiErr> {
     debug!("Fetching information from API");

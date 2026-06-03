@@ -3,21 +3,21 @@
  * All Rights Reserved
  */
 
-use std::future::IntoFuture;
-use tracing::{Instrument, debug, debug_span, instrument, warn};
-use twilight_model::application::interaction::Interaction;
-use twilight_model::application::interaction::application_command::CommandData;
-use twilight_model::channel::message::MessageFlags;
-
 use crate::commands::share::ShareCommandData;
 use crate::context::Ctx;
 use crate::handlers::interactions::common::{
-    InvalidLink, VALID_LINKS_REGEX, additional_link_validation, build_components, data_routine,
+    InvalidLink, VALID_DOMAINS_REGEX, additional_link_validation, build_components, data_routine,
 };
 use crate::handlers::interactions::messages;
 use crate::util::EmptyResult;
 use crate::util::error::expect_warn;
 use crate::util::interaction::{defer, get_options, respond_with, update_defer_with_error};
+use std::future::IntoFuture;
+use tracing::{Instrument, debug, debug_span, instrument, warn};
+use twilight_model::application::interaction::Interaction;
+use twilight_model::application::interaction::application_command::CommandData;
+use twilight_model::channel::message::MessageFlags;
+use url::Url;
 
 pub async fn handle(inter: Interaction, data: CommandData, context: Ctx) {
     // use an inner function to make splitting the code easier
@@ -29,12 +29,12 @@ async fn handle_inner(inter: Interaction, data: CommandData, context: Ctx) -> Em
     debug!("Received Share Command Interaction");
 
     let options = get_options(&data, &context).await?;
-    validate_url(&options, &inter, &context).await?;
+    let url = validate_url(&options, &inter, &context).await?;
 
     debug!("User passed valid arguments, deferring Response");
     let defer_future = defer(&inter, &context);
 
-    let (data, entity, color) = match data_routine(&options.url, &context).await {
+    let (data, entity, color) = match data_routine(&url, &context).await {
         Ok(data) => data,
         Err(e) => {
             warn!(failed_with = %e, "Failed to get the data from the api");
@@ -70,10 +70,10 @@ pub async fn validate_url(
     options: &ShareCommandData,
     inter: &Interaction,
     context: &Ctx,
-) -> EmptyResult<()> {
-    let mat = match VALID_LINKS_REGEX.find(options.url.as_str()) {
-        Some(mat) if mat.len() == options.url.len() => mat,
-        _ => {
+) -> EmptyResult<Url> {
+    let url = match Url::parse(options.url.as_str()) {
+        Ok(url) => url,
+        Err(_) => {
             debug!("URL is not valid, informing user");
             respond_with(
                 inter,
@@ -85,7 +85,21 @@ pub async fn validate_url(
         }
     };
 
-    if let Err(reason) = additional_link_validation(mat.as_str()) {
+    match url.domain() {
+        Some(domain) if VALID_DOMAINS_REGEX.is_match(domain) => (),
+        _ => {
+            debug!("URL domain is not supported, informing user");
+            respond_with(
+                inter,
+                context,
+                messages::invalid_url((&inter.locale).into()),
+            )
+            .await;
+            return Err(());
+        }
+    }
+
+    if let Err(reason) = additional_link_validation(&url) {
         match reason {
             InvalidLink::Playlist => {
                 debug!("URL is a playlist, informing user");
@@ -118,5 +132,5 @@ pub async fn validate_url(
         return Err(());
     }
 
-    Ok(())
+    Ok(url)
 }

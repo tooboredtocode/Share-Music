@@ -3,25 +3,30 @@
  * All Rights Reserved
  */
 
+use crate::context::metrics::{Metrics as CtxMetrics, ThirdPartyLabels};
+use crate::util::odesli::cache::OdesliCache;
+use crate::util::odesli::endpoints::OdesliEndpoints;
 use prometheus_client::metrics::family::Family;
 use prometheus_client::metrics::histogram::Histogram;
 use std::borrow::Cow;
 use std::fmt;
-use std::time::Instant;
-use tracing::{Instrument, instrument};
-
-use crate::context::metrics::{Metrics as CtxMetrics, ThirdPartyLabels};
-use crate::util::odesli::endpoints::OdesliEndpoints;
+use std::time::{Duration, Instant};
+use tracing::{Instrument, debug, instrument};
+use url::Url;
 
 mod api_type;
+mod cache;
 mod endpoints;
 mod error;
+mod provider_id;
 
+use crate::util::odesli::provider_id::ProviderId;
 pub use api_type::*;
 pub use error::ApiErr;
 
 pub struct OdesliClient {
     client: reqwest::Client,
+    cache: OdesliCache,
     metrics: OdesliMetrics,
 }
 
@@ -41,15 +46,36 @@ impl OdesliClient {
     pub fn new(client: reqwest::Client, metrics: &CtxMetrics) -> Self {
         Self {
             client,
+            cache: OdesliCache::new(),
             metrics: OdesliMetrics {
                 third_party_api: metrics.third_party_api.clone(),
             },
         }
     }
 
+    pub fn clear_expired_cache_entries(&self, max_age: Duration) {
+        self.cache.clear_expired(max_age);
+    }
+
     #[instrument(level = "debug", skip_all)]
-    pub async fn fetch(&self, url: impl Into<String>) -> Result<OdesliResponse, ApiErr> {
-        let req_data = OdesliEndpoints::links(url);
+    pub async fn fetch(&self, url: &Url) -> Result<OdesliResponse, ApiErr> {
+        match ProviderId::parse_url(url) {
+            Ok(provider_id) => {
+                if let Some(cached) = self.cache.get_response(&provider_id) {
+                    debug!("Cache hit for provider {:?}", provider_id);
+                    return Ok(cached);
+                }
+                debug!(
+                    "Cache miss for provider {:?}, fetching from API",
+                    provider_id
+                );
+            }
+            Err(e) => {
+                debug!("Failed to parse provider ID from URL: {}", e);
+            }
+        }
+
+        let req_data = OdesliEndpoints::links(url.as_str());
 
         let req = self
             .client
@@ -77,6 +103,9 @@ impl OdesliClient {
             return Err(ApiErr::Non200Response(resp.status()));
         }
 
-        Ok(resp.json().await?)
+        let res = resp.json::<OdesliResponse>().await?;
+        self.cache.store_response(&res);
+
+        Ok(res)
     }
 }

@@ -10,7 +10,7 @@ use std::fmt;
 use std::fmt::{Display, Formatter};
 use tracing::warn;
 
-#[derive(Debug, Serialize, Deserialize)]
+#[derive(Clone, Debug, Serialize, Deserialize)]
 #[serde(rename_all = "camelCase")]
 pub struct OdesliResponse {
     /// The unique ID for the input entity that was supplied in the request. The
@@ -53,7 +53,7 @@ impl OdesliResponse {
     pub fn links(&self) -> Vec<(String, String)> {
         self.links_by_platform
             .iter()
-            .filter(|(platform, _)| !matches!(platform, Platform::Other(_)))
+            .filter(|(platform, _)| platform.is_enabled())
             .map(|(p, l)| (p.to_string(), l.url.clone()))
             .collect()
     }
@@ -213,6 +213,16 @@ pub enum Platform {
     BoomPlay,
     #[serde(untagged)]
     Other(String),
+}
+
+impl Platform {
+    pub fn is_enabled(&self) -> bool {
+        match self {
+            Self::AmazonStore => false, // Links currently don't work for some reason, so exclude them for now
+            Self::Other(_) => false, // Exclude unknown platforms since we don't know if they work or not
+            _ => true, // Default to true for other platforms since we don't want to exclude them
+        }
+    }
 }
 
 impl Display for Platform {
