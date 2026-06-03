@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2021-2025 tooboredtocode
+ * Copyright (c) 2021-2026 tooboredtocode
  * All Rights Reserved
  */
 
@@ -69,6 +69,16 @@ pub const fn no_links_found(locale: DiscordLocale) -> &'static str {
             "Es konnten keine uns bekannten links in der Nachricht gefunden werden"
         }
         _ => "Couldn't find any links in the message",
+    }
+}
+
+#[inline]
+pub const fn select_menu_with_depreciated_lookup_link(locale: DiscordLocale) -> &'static str {
+    match locale {
+        DiscordLocale::German => {
+            "Embedded Player für diese Plattform kann leider nicht angezeigt werden..."
+        }
+        _ => "Embedded player can unfortunately not be shown for this platform...",
     }
 }
 

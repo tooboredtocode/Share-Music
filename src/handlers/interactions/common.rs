@@ -4,13 +4,16 @@
  */
 
 use crate::context::Ctx;
+use crate::handlers::interactions::show_player::build_select_menu;
 use crate::util::colour::{RGBPixel, get_dominant_colour};
 use crate::util::odesli::{ApiErr, EntityData, OdesliResponse, Platform, fetch_from_api};
 use lazy_regex::{Lazy, lazy_regex};
 use regex::Regex;
 use tracing::{debug, instrument};
-use twilight_util::builder::embed::{
-    EmbedAuthorBuilder, EmbedBuilder, EmbedFooterBuilder, ImageSource,
+use twilight_model::channel::message::Component;
+use twilight_model::channel::message::component::UnfurledMediaItem;
+use twilight_util::builder::message::{
+    ContainerBuilder, SectionBuilder, TextDisplayBuilder, ThumbnailBuilder,
 };
 
 // language=RegExp
@@ -114,48 +117,78 @@ fn fix_platform_links(resp: &mut OdesliResponse) {
     }
 }
 
-pub fn build_embed(
+fn unfurled_media_item_from_url(url: String) -> UnfurledMediaItem {
+    UnfurledMediaItem {
+        url,
+        width: None,
+        height: None,
+        proxy_url: None,
+        content_type: None,
+    }
+}
+
+pub fn build_components(
     data: &OdesliResponse,
     entity: EntityData,
     colour: Option<RGBPixel>,
-) -> EmbedBuilder {
-    let mut embed = EmbedBuilder::new();
+    idx: Option<u16>,
+) -> [Component; 1] {
+    use std::fmt::Write;
+
+    let mut container = ContainerBuilder::new();
+    if let Some(colour) = colour {
+        container = container.accent_color(Some(colour.to_hex()));
+    }
+
     let EntityData {
         title,
         artist_name,
         thumbnail_url,
+        ..
     } = entity;
 
+    let artist_details = artist_name.as_ref().map(|artist| format!("**{}**", artist));
+
+    let mut details = String::new();
     if let Some(title) = title {
-        embed = embed.title(title).url(&data.page_url)
+        writeln!(details, "## [{}]({})", title, data.page_url)
+            .expect("Writing to string should not fail");
     }
-
-    if let Some(artist_name) = artist_name {
-        embed = embed.author(EmbedAuthorBuilder::new(artist_name))
-    }
-
-    if let Some(thumbnail_url) = thumbnail_url
-        && let Ok(src) = ImageSource::url(thumbnail_url)
-    {
-        embed = embed.thumbnail(src)
-    }
-
-    if let Some(colour) = colour {
-        embed = embed.color(colour.to_hex());
-    }
-
-    embed = embed.footer(EmbedFooterBuilder::new("Powered by odesli.co"));
 
     let mut links = data.links();
     links.sort_by_key(|a| a.0.to_lowercase());
 
-    embed = embed.description(
-        links
-            .iter()
-            .map(|(platform, link)| format!("[{}]({})", platform, link))
-            .collect::<Vec<String>>()
-            .join(" | "),
-    );
+    for (i, (platform, link)) in links.iter().enumerate() {
+        if i > 0 {
+            details.push_str("  \u{2022}  "); // 2 tabs with a bullet in the middle
+        }
 
-    embed
+        write!(details, "[{}]({})", platform, link).expect("Writing to string should not fail");
+    }
+
+    if let Some(thumbnail_url) = thumbnail_url {
+        let thumbnail = ThumbnailBuilder::new(unfurled_media_item_from_url(thumbnail_url)).build();
+        let mut section_builder = SectionBuilder::new(thumbnail);
+
+        if let Some(artist_details) = artist_details {
+            section_builder =
+                section_builder.component(TextDisplayBuilder::new(artist_details).build());
+        }
+        section_builder = section_builder.component(TextDisplayBuilder::new(details).build());
+
+        container = container.component(section_builder.build());
+    } else {
+        if let Some(artist_details) = artist_details {
+            container = container.component(TextDisplayBuilder::new(artist_details).build());
+        }
+        container = container.component(TextDisplayBuilder::new(details).build());
+    };
+
+    if let Some(show_platform_players) = build_select_menu(data, idx) {
+        container = container.component(show_platform_players);
+    }
+
+    container = container.component(TextDisplayBuilder::new("-# Powered by odesli.co").build());
+
+    [container.build().into()]
 }

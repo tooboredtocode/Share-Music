@@ -1,7 +1,8 @@
 /*
- * Copyright (c) 2021-2025 tooboredtocode
+ * Copyright (c) 2021-2026 tooboredtocode
  * All Rights Reserved
  */
+
 use crate::commands::{
     find_links::COMMAND_NAME as FIND_COMMAND_NAME, share::COMMAND_NAME as SHARE_COMMAND_NAME,
     test_colour_consts::COMMAND_NAME as TEST_COMMAND_NAME,
@@ -89,17 +90,21 @@ async fn handle_message_components(
 ) {
     debug!("Received Message Component Interaction");
 
-    match (
-        component_data.component_type,
-        component_data.custom_id.as_str(),
-    ) {
-        (ComponentType::TextSelectMenu, show_player::SELECT_ID) => {
-            show_player::handle(inter, component_data, context).await
+    if component_data.component_type == ComponentType::TextSelectMenu {
+        debug!(
+            "Received Text Select Menu Interaction with custom_id: {}",
+            component_data.custom_id
+        );
+        // Handle the Show Player Select Menu Interaction if the custom_id starts with the expected prefix
+        if component_data.custom_id.starts_with(show_player::SELECT_ID) {
+            debug!("Handling Show Player Select Menu Interaction");
+            return show_player::handle(inter, component_data, context).await;
         }
-        (kind, name) => debug!(
-            "Unknown {} Application Command Interaction: {}",
-            kind.name(),
-            name
-        ),
     }
+
+    debug!(
+        "Unknown {} Application Command Interaction: {}",
+        component_data.component_type.name(),
+        component_data.custom_id
+    );
 }

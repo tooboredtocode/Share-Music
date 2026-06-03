@@ -9,10 +9,11 @@ use std::future::IntoFuture;
 use tracing::{Instrument, debug, debug_span, instrument, warn};
 use twilight_model::application::interaction::Interaction;
 use twilight_model::application::interaction::application_command::CommandData;
+use twilight_model::channel::message::MessageFlags;
 
 use crate::context::Ctx;
 use crate::handlers::interactions::common::{
-    VALID_LINKS_REGEX, additional_link_validation, build_embed, data_routine,
+    VALID_LINKS_REGEX, additional_link_validation, build_components, data_routine,
 };
 use crate::handlers::interactions::messages;
 use crate::handlers::interactions::messages::no_links_found;
@@ -64,10 +65,13 @@ async fn handle_inner(inter: Interaction, data: CommandData, context: Ctx) -> Em
         }
     };
 
-    let embeds = data
+    let components = data
         .into_iter()
-        .map(|(data, entity, color)| build_embed(&data, entity, color))
-        .map(|e| e.build())
+        .enumerate()
+        // Give the components an index so that we do not have duplicate custom ids in the message
+        .flat_map(|(idx, (data, entity, color))| {
+            build_components(&data, entity, color, Some(idx as u16))
+        })
         .collect_vec();
 
     defer_future
@@ -76,8 +80,9 @@ async fn handle_inner(inter: Interaction, data: CommandData, context: Ctx) -> Em
 
     context
         .interaction_client()
-        .create_followup(inter.token.as_str())
-        .embeds(embeds.as_slice())
+        .update_response(inter.token.as_str())
+        .flags(MessageFlags::IS_COMPONENTS_V2)
+        .components(Some(&components))
         .into_future()
         .instrument(debug_span!("sending_response"))
         .await

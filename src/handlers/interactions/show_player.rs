@@ -26,9 +26,13 @@ pub const EMBEDDABLE_PLATFORMS: &[Platform] = &[
     Platform::YouTube,
 ];
 
-pub fn build_select_menu(data: &OdesliResponse) -> Option<Component> {
-    let mut select_menu = SelectMenuBuilder::new(SELECT_ID.to_string(), SelectMenuType::Text)
-        .placeholder("Show Embedded Player");
+pub fn build_select_menu(data: &OdesliResponse, idx: Option<u16>) -> Option<Component> {
+    let custom_id = idx
+        .map(|i| format!("{}_{}", SELECT_ID, i))
+        .unwrap_or_else(|| SELECT_ID.to_string());
+
+    let mut select_menu =
+        SelectMenuBuilder::new(custom_id, SelectMenuType::Text).placeholder("Show Embedded Player");
 
     let mut has_options = false;
     for (platform, links) in data
@@ -39,7 +43,11 @@ pub fn build_select_menu(data: &OdesliResponse) -> Option<Component> {
         let value = if links.url.len() <= 100 {
             links.url.clone()
         } else {
-            format!("lookup_{:?}", platform)
+            debug!(
+                link = links.url,
+                "Link for platform {} is too long to embed, skipping", platform
+            );
+            continue;
         };
 
         select_menu =
@@ -78,66 +86,19 @@ async fn handle_inner(
         return Err(());
     };
 
-    let link = match selected.as_str() {
-        "lookup_AppleMusic" => find_link_for_platform(&inter, Platform::AppleMusic)?,
-        "lookup_Spotify" => find_link_for_platform(&inter, Platform::Spotify)?,
-        "lookup_AmazonMusic" => find_link_for_platform(&inter, Platform::AmazonMusic)?,
-        "lookup_YouTube" => find_link_for_platform(&inter, Platform::YouTube)?,
-        s => s,
-    };
+    if selected.starts_with("lookup_") {
+        warn!("Selected value is a depreciated lookup link, cannot show embedded player");
+        respond_with(
+            &inter,
+            &context,
+            messages::select_menu_with_depreciated_lookup_link((&inter.locale).into()),
+        )
+        .await;
+        return Err(());
+    }
 
     debug!("Sending link to embed the player");
-    respond_with(&inter, &context, link).await;
+    respond_with(&inter, &context, selected).await;
 
     Ok(())
-}
-
-fn find_link_for_platform(inter: &Interaction, platform: Platform) -> EmptyResult<&str> {
-    let Some(message) = &inter.message else {
-        warn!("Received Message Component Interaction without a message");
-        return Err(());
-    };
-
-    let Some(embed) = message.embeds.first() else {
-        warn!("Message from Select Player Interaction has no embeds");
-        return Err(());
-    };
-
-    let Some(description) = &embed.description else {
-        warn!("Embed from Select Player Interaction has no description");
-        return Err(());
-    };
-
-    let Some(link) = description
-        .split(" | ")
-        .filter_map(platform_and_link_from_link)
-        .find_map(
-            |(plat, link)| {
-                if plat == platform { Some(link) } else { None }
-            },
-        )
-    else {
-        warn!(
-            "No link found for platform {:?} in embed description",
-            platform
-        );
-        return Err(());
-    };
-
-    Ok(link)
-}
-
-fn platform_and_link_from_link(link: &str) -> Option<(Platform, &str)> {
-    let mut split_iter = link.split(&['[', ']', '(', ')']).filter(|s| !s.is_empty());
-
-    let platform = split_iter.next()?;
-    let link = split_iter.next()?;
-
-    match platform {
-        "Apple Music" => Some((Platform::AppleMusic, link)),
-        "Spotify" => Some((Platform::Spotify, link)),
-        "Amazon Music" => Some((Platform::AmazonMusic, link)),
-        "YouTube" => Some((Platform::YouTube, link)),
-        _ => None,
-    }
 }

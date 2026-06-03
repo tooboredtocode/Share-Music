@@ -7,14 +7,14 @@ use std::future::IntoFuture;
 use tracing::{Instrument, debug, debug_span, instrument, warn};
 use twilight_model::application::interaction::Interaction;
 use twilight_model::application::interaction::application_command::CommandData;
+use twilight_model::channel::message::MessageFlags;
 
 use crate::commands::share::ShareCommandData;
 use crate::context::Ctx;
 use crate::handlers::interactions::common::{
-    InvalidLink, VALID_LINKS_REGEX, additional_link_validation, build_embed, data_routine,
+    InvalidLink, VALID_LINKS_REGEX, additional_link_validation, build_components, data_routine,
 };
 use crate::handlers::interactions::messages;
-use crate::handlers::interactions::show_player::build_select_menu;
 use crate::util::EmptyResult;
 use crate::util::error::expect_warn;
 use crate::util::interaction::{defer, get_options, respond_with, update_defer_with_error};
@@ -48,14 +48,14 @@ async fn handle_inner(inter: Interaction, data: CommandData, context: Ctx) -> Em
         .await
         .map_err(expect_warn!("Failed to join the defer future"))??;
 
-    let embed = build_embed(&data, entity, color);
-    let components = build_select_menu(&data).map(|menu| [menu]);
+    // No need to pass an index since we only have one link, and thus one component
+    let components = build_components(&data, entity, color, None);
 
     context
         .interaction_client()
         .update_response(inter.token.as_str())
-        .embeds(Some(&[embed.build()]))
-        .components(components.as_ref().map(|c| c.as_ref()))
+        .flags(MessageFlags::IS_COMPONENTS_V2)
+        .components(Some(&components))
         .into_future()
         .instrument(debug_span!("sending_response"))
         .await
