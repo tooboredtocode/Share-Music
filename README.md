@@ -6,6 +6,6 @@ You can add the bot [here](https://albedo.me/share-music/invite)
 
 ---
 
-Copyright (c) 2021-2024 tooboredtocode
+Copyright (c) 2021-2026 tooboredtocode
 
 All Rights Reserved

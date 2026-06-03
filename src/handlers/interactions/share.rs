@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2021-2025 tooboredtocode
+ * Copyright (c) 2021-2026 tooboredtocode
  * All Rights Reserved
  */
 
@@ -14,7 +14,7 @@ use crate::handlers::interactions::common::{
     InvalidLink, VALID_LINKS_REGEX, additional_link_validation, build_embed, data_routine,
 };
 use crate::handlers::interactions::messages;
-use crate::handlers::interactions::show_player::build_components;
+use crate::handlers::interactions::show_player::build_select_menu;
 use crate::util::EmptyResult;
 use crate::util::error::expect_warn;
 use crate::util::interaction::{defer, get_options, respond_with, update_defer_with_error};
@@ -49,7 +49,7 @@ async fn handle_inner(inter: Interaction, data: CommandData, context: Ctx) -> Em
         .map_err(expect_warn!("Failed to join the defer future"))??;
 
     let embed = build_embed(&data, entity, color);
-    let components = build_components(&data);
+    let components = build_select_menu(&data).map(|menu| [menu]);
 
     context
         .interaction_client()

@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2021-2025 tooboredtocode
+ * Copyright (c) 2021-2026 tooboredtocode
  * All Rights Reserved
  */
 
@@ -134,10 +134,10 @@ pub fn build_embed(
         embed = embed.author(EmbedAuthorBuilder::new(artist_name))
     }
 
-    if let Some(thumbnail_url) = thumbnail_url {
-        if let Ok(src) = ImageSource::url(thumbnail_url) {
-            embed = embed.thumbnail(src)
-        }
+    if let Some(thumbnail_url) = thumbnail_url
+        && let Ok(src) = ImageSource::url(thumbnail_url)
+    {
+        embed = embed.thumbnail(src)
     }
 
     if let Some(colour) = colour {
@@ -147,7 +147,7 @@ pub fn build_embed(
     embed = embed.footer(EmbedFooterBuilder::new("Powered by odesli.co"));
 
     let mut links = data.links();
-    links.sort_by(|a, b| a.0.to_lowercase().cmp(&b.0.to_lowercase()));
+    links.sort_by_key(|a| a.0.to_lowercase());
 
     embed = embed.description(
         links

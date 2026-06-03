@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2021-2025 tooboredtocode
+ * Copyright (c) 2021-2026 tooboredtocode
  * All Rights Reserved
  */
 
@@ -63,7 +63,7 @@ impl GuildStore {
 
     pub fn register(&self, shard_id: u32, event: &Event, ctx: &Ctx) {
         match event {
-            Event::Ready(ready) => self.register_ready(shard_id, ready.deref()),
+            Event::Ready(ready) => self.register_ready(shard_id, ready),
             Event::GuildCreate(create) => self.register_create(shard_id, create.deref()),
             Event::GuildDelete(delete) => self.register_delete(shard_id, delete),
             _ => return,

@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2021-2025 tooboredtocode
+ * Copyright (c) 2021-2026 tooboredtocode
  * All Rights Reserved
  */
 
@@ -74,18 +74,16 @@ async fn handle_inner(inter: Interaction, data: CommandData, context: Ctx) -> Em
         .await
         .map_err(expect_warn!("Failed to join the defer future"))??;
 
-    let r = context
+    context
         .interaction_client()
         .create_followup(inter.token.as_str())
         .embeds(embeds.as_slice())
         .into_future()
         .instrument(debug_span!("sending_response"))
         .await
-        .map_err(expect_warn!("Failed to send the response to the user"));
+        .map_err(expect_warn!("Failed to send the response to the user"))?;
 
-    if r.is_ok() {
-        debug!("Successfully sent Response");
-    }
+    debug!("Successfully sent Response");
 
     Ok(())
 }

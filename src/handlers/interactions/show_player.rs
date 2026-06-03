@@ -1,3 +1,8 @@
+/*
+ * Copyright (c) 2021-2026 tooboredtocode
+ * All Rights Reserved
+ */
+
 use crate::context::Ctx;
 use crate::handlers::interactions::messages;
 use crate::util::EmptyResult;
@@ -7,8 +12,9 @@ use tracing::{debug, instrument, warn};
 use twilight_model::application::interaction::Interaction;
 use twilight_model::application::interaction::message_component::MessageComponentInteractionData;
 use twilight_model::channel::message::Component;
-use twilight_model::channel::message::component::{
-    ActionRow, SelectMenu, SelectMenuOption, SelectMenuType,
+use twilight_model::channel::message::component::SelectMenuType;
+use twilight_util::builder::message::{
+    ActionRowBuilder, SelectMenuBuilder, SelectMenuOptionBuilder,
 };
 
 pub const SELECT_ID: &str = "odesli_select";
@@ -20,47 +26,37 @@ pub const EMBEDDABLE_PLATFORMS: &[Platform] = &[
     Platform::YouTube,
 ];
 
-pub fn build_components(data: &OdesliResponse) -> Option<[Component; 1]> {
-    let options = EMBEDDABLE_PLATFORMS
-        .iter()
-        .filter_map(|platform| {
-            data.links_by_platform
-                .get(platform)
-                .map(|links| (platform, links))
-        })
-        .map(|(platform, links)| SelectMenuOption {
-            default: false,
-            description: None,
-            emoji: None,
-            label: platform.to_string(),
-            value: if links.url.len() <= 100 {
-                links.url.clone()
-            } else {
-                format!("lookup_{:?}", platform)
-            },
-        })
-        .collect::<Vec<SelectMenuOption>>();
+pub fn build_select_menu(data: &OdesliResponse) -> Option<Component> {
+    let mut select_menu = SelectMenuBuilder::new(SELECT_ID.to_string(), SelectMenuType::Text)
+        .placeholder("Show Embedded Player");
 
-    if options.is_empty() {
+    let mut has_options = false;
+    for (platform, links) in data
+        .links_by_platform
+        .iter()
+        .filter(|(platform, _)| EMBEDDABLE_PLATFORMS.contains(platform))
+    {
+        let value = if links.url.len() <= 100 {
+            links.url.clone()
+        } else {
+            format!("lookup_{:?}", platform)
+        };
+
+        select_menu =
+            select_menu.option(SelectMenuOptionBuilder::new(platform.to_string(), value).build());
+        has_options = true;
+    }
+
+    if !has_options {
         debug!("No embeddable platforms found, not sending select menu");
         return None;
     }
 
-    let component = Component::ActionRow(ActionRow {
-        components: Vec::from([Component::SelectMenu(SelectMenu {
-            custom_id: SELECT_ID.to_string(),
-            kind: SelectMenuType::Text,
-            disabled: false,
-            placeholder: Some("Show Platform Players".to_string()),
-            options: Some(options),
-            channel_types: None,
-            default_values: None,
-            min_values: None,
-            max_values: None,
-        })]),
-    });
-
-    Some([component])
+    Some(Component::ActionRow(
+        ActionRowBuilder::new()
+            .component(select_menu.build())
+            .build(),
+    ))
 }
 
 pub async fn handle(inter: Interaction, data: MessageComponentInteractionData, context: Ctx) {
