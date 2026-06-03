@@ -2,17 +2,20 @@
  * Copyright (c) 2021-2025 tooboredtocode
  * All Rights Reserved
  */
-use std::cmp::max;
-use std::sync::Arc;
 
 use crate::color_config::ColorConfig;
 use crate::constants::cluster_consts;
 use crate::context::metrics::Metrics;
 use crate::util::EmptyResult;
+use crate::util::colour::ImageClient;
 use crate::util::error::expect_err;
+use crate::util::odesli::OdesliClient;
 use crate::util::signal::start_signal_listener;
 use prometheus_client::encoding::EncodeLabelValue;
 use reqwest::Client;
+use std::cmp::max;
+use std::sync::Arc;
+use std::time::Duration;
 use this_state::State as ThisState;
 use tracing::{error, info};
 use twilight_gateway::{ConfigBuilder as ShardConfigBuilder, Shard, create_iterator};
@@ -21,7 +24,6 @@ use twilight_model::id::Id;
 use twilight_model::id::marker::ApplicationMarker;
 
 mod discord_client;
-mod http_client;
 pub mod metrics;
 mod status_server;
 
@@ -50,10 +52,11 @@ impl ClusterState {
 
 #[derive(Debug)]
 pub struct Context {
+    pub odesli_client: OdesliClient,
+    pub image_client: ImageClient,
     pub discord_client: TwilightClient,
-    bot_id: Id<ApplicationMarker>,
 
-    pub http_client: Client,
+    bot_id: Id<ApplicationMarker>,
 
     pub cfg: SavedConfig,
 
@@ -65,7 +68,6 @@ pub struct Context {
 #[derive(Debug)]
 pub struct SavedConfig {
     pub debug_server: Vec<u64>,
-    pub color: ColorConfig,
 }
 
 pub type Ctx = Arc<Context>;
@@ -101,15 +103,20 @@ impl Context {
         let discord_shards =
             Self::create_shards(&discord_client, token, cluster_id, cluster_count).await?;
 
-        let http_client = Self::create_http_client()?;
+        let http_client = Client::builder()
+            .user_agent(crate::constants::USER_AGENT)
+            .redirect(reqwest::redirect::Policy::none())
+            .timeout(Duration::from_secs(30))
+            .build()
+            .map_err(expect_err!("Failed to create HTTP client"))?;
 
         let ctx: Arc<_> = Context {
+            image_client: ImageClient::new(http_client.clone(), color_config, &metrics),
+            odesli_client: OdesliClient::new(http_client, &metrics),
             discord_client,
             bot_id,
-            http_client,
             cfg: SavedConfig {
                 debug_server: debug_servers.to_vec(),
-                color: color_config,
             },
             metrics,
             state,

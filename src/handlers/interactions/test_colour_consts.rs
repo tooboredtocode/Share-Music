@@ -12,7 +12,7 @@ use twilight_util::builder::embed::{EmbedBuilder, ImageSource};
 use crate::commands::test_colour_consts::TestConstsCommandData;
 use crate::context::Ctx;
 use crate::util::EmptyResult;
-use crate::util::colour::{RGBPixel, get_dominant_colour};
+use crate::util::colour::RGBPixel;
 use crate::util::error::expect_warn;
 use crate::util::interaction::{defer, get_options, respond_with};
 
@@ -40,7 +40,9 @@ async fn handle_inner(inter: Interaction, data: CommandData, context: Ctx) -> Em
     let defer_future = defer(&inter, &context);
 
     debug!("Fetching Dominant Colour of Image");
-    let colour = get_dominant_colour(&options.url, &context, (&options).into())
+    let colour = context
+        .image_client
+        .get_dominant_colour_from_url(&options.url, (&options).into())
         .await
         .ok();
 

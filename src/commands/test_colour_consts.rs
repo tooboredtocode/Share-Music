@@ -76,7 +76,7 @@ pub struct TestConstsCommandData {
     pub luminosity_factor: Option<f32>,
 }
 
-impl From<&TestConstsCommandData> for colour::Options {
+impl From<&TestConstsCommandData> for colour::OptionsOverride {
     fn from(data: &TestConstsCommandData) -> Self {
         Self {
             brightest_percent: data.brightest_percent,

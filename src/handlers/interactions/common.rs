@@ -5,8 +5,8 @@
 
 use crate::context::Ctx;
 use crate::handlers::interactions::show_player::build_select_menu;
-use crate::util::colour::{RGBPixel, get_dominant_colour};
-use crate::util::odesli::{ApiErr, EntityData, OdesliResponse, Platform, fetch_from_api};
+use crate::util::colour::RGBPixel;
+use crate::util::odesli::{ApiErr, EntityData, OdesliResponse, Platform};
 use lazy_regex::{Lazy, lazy_regex};
 use regex::Regex;
 use tracing::{debug, instrument};
@@ -71,7 +71,7 @@ pub async fn data_routine(
     context: &Ctx,
 ) -> Result<(OdesliResponse, EntityData, Option<RGBPixel>), ApiErr> {
     debug!("Fetching information from API");
-    let mut data = fetch_from_api(url, context).await?;
+    let mut data = context.odesli_client.fetch(url).await?;
     fix_platform_links(&mut data);
 
     let entity_data = data.get_data();
@@ -84,7 +84,9 @@ pub async fn data_routine(
     let color = match &entity_data.thumbnail_url {
         Some(url) => {
             debug!("Album/Song has a Thumbnail, getting dominant colour");
-            get_dominant_colour(url, context, Default::default())
+            context
+                .image_client
+                .get_dominant_colour_from_url(url, Default::default())
                 .await
                 .ok()
         }
