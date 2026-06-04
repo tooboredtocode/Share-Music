@@ -12,8 +12,9 @@ use crate::handlers::interactions::messages;
 use crate::util::EmptyResult;
 use crate::util::error::expect_warn;
 use crate::util::interaction::{defer, get_options, respond_with, update_defer_with_error};
+use crate::util::odesli::ApiErr;
 use std::future::IntoFuture;
-use tracing::{Instrument, debug, debug_span, instrument, warn};
+use tracing::{Instrument, debug, debug_span, info, instrument, warn};
 use twilight_model::application::interaction::Interaction;
 use twilight_model::application::interaction::application_command::CommandData;
 use twilight_model::channel::message::MessageFlags;
@@ -37,9 +38,18 @@ async fn handle_inner(inter: Interaction, data: CommandData, context: Ctx) -> Em
     let (data, entity, color) = match data_routine(&url, &context).await {
         Ok(data) => data,
         Err(e) => {
-            warn!(failed_with = %e, "Failed to get the data from the api");
-            update_defer_with_error(&inter, &context, messages::error((&inter.locale).into()))
-                .await;
+            let message = match e {
+                ApiErr::RateLimitExceeded => {
+                    info!("Rate limit exceeded when trying to get the data from the api");
+                    messages::ratelimit_exceeded((&inter.locale).into())
+                }
+                _ => {
+                    warn!(failed_with = %e, "Failed to get the data from the api");
+                    messages::error((&inter.locale).into())
+                }
+            };
+
+            update_defer_with_error(&inter, &context, message).await;
             return Err(());
         }
     };

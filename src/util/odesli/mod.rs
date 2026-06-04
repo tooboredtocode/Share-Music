@@ -8,6 +8,7 @@ use crate::util::odesli::cache::OdesliCache;
 use crate::util::odesli::endpoints::OdesliEndpoints;
 use prometheus_client::metrics::family::Family;
 use prometheus_client::metrics::histogram::Histogram;
+use reqwest::StatusCode;
 use std::borrow::Cow;
 use std::fmt;
 use std::time::{Duration, Instant};
@@ -99,8 +100,23 @@ impl OdesliClient {
             })
             .observe(diff.as_secs_f64());
 
-        if resp.status() != 200 {
-            return Err(ApiErr::Non200Response(resp.status()));
+        match resp.status() {
+            StatusCode::OK => {}
+            StatusCode::TOO_MANY_REQUESTS => {
+                return Err(ApiErr::RateLimitExceeded);
+            }
+            _ => {
+                let status = resp.status();
+                debug!(
+                    "API request returned unexpected status {}, trying to read error response body",
+                    status
+                );
+                match resp.text().await {
+                    Ok(text) => debug!(body = %text, "Successfully read API error response body"),
+                    Err(e) => debug!(failed_with = %e, "Failed to read API error response body"),
+                }
+                return Err(ApiErr::UnexpectedResponseStatus(status));
+            }
         }
 
         let res = resp.json::<OdesliResponse>().await?;

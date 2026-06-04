@@ -11,7 +11,8 @@ use reqwest::StatusCode;
 #[derive(Debug)]
 pub enum ApiErr {
     Reqwest(reqwest::Error),
-    Non200Response(StatusCode),
+    RateLimitExceeded,
+    UnexpectedResponseStatus(StatusCode),
 }
 
 impl From<reqwest::Error> for ApiErr {
@@ -24,7 +25,10 @@ impl Display for ApiErr {
     fn fmt(&self, f: &mut Formatter<'_>) -> std::fmt::Result {
         match self {
             ApiErr::Reqwest(err) => write!(f, "Reqwest error: {}", err),
-            ApiErr::Non200Response(code) => write!(f, "API returned a non 200 response: {}", code),
+            ApiErr::RateLimitExceeded => write!(f, "Rate limit exceeded"),
+            ApiErr::UnexpectedResponseStatus(status_code) => {
+                write!(f, "Unexpected response status: {}", status_code)
+            }
         }
     }
 }

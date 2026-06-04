@@ -83,6 +83,16 @@ pub const fn select_menu_with_depreciated_lookup_link(locale: DiscordLocale) -> 
 }
 
 #[inline]
+pub const fn ratelimit_exceeded(locale: DiscordLocale) -> &'static str {
+    match locale {
+        DiscordLocale::German => {
+            "Die Links konnten momentan leider nicht abgerufen werden, bitte versuche es später noch einmal"
+        }
+        _ => "The Links could not be fetched at this time, please try again later",
+    }
+}
+
+#[inline]
 pub const fn error(locale: DiscordLocale) -> &'static str {
     match locale {
         DiscordLocale::German => {
