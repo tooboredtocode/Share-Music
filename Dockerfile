@@ -14,9 +14,7 @@ RUN cargo chef cook --release --recipe-path recipe.json
 COPY . .
 RUN cargo build --release --bin share-music
 
-FROM gcr.io/distroless/cc-debian12 as runtime
-# copy missing dynamic libraries
-COPY --from=chef --chown=root:root /lib/x86_64-linux-gnu/libz.so.1 /lib/x86_64-linux-gnu/libz.so.1
+FROM gcr.io/distroless/cc-debian13:latest AS runtime
 
 COPY --from=builder /share-music/target/release/share-music /share-music
 ENTRYPOINT ["./share-music"]
