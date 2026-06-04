@@ -44,6 +44,7 @@ pub struct OdesliResponse {
 }
 
 pub struct EntityData {
+    pub kind: Option<String>,
     pub title: Option<String>,
     pub artist_name: Option<String>,
     pub thumbnail_url: Option<String>,
@@ -63,6 +64,7 @@ impl OdesliResponse {
             .entities_by_unique_id
             .get(&self.entity_unique_id)
             .map(|e| EntityData {
+                kind: Some(e.kind.clone()),
                 title: e.title.clone(),
                 artist_name: e.artist_name.clone(),
                 thumbnail_url: e.thumbnail_url.clone(),
@@ -74,6 +76,7 @@ impl OdesliResponse {
                 );
                 // Maybe some prioritized entity has data
                 EntityData {
+                    kind: None,
                     title: None,
                     artist_name: None,
                     thumbnail_url: None,
@@ -109,6 +112,7 @@ impl OdesliResponse {
             }
 
             res = EntityData {
+                kind: Some(entity.kind.clone()),
                 title: title.clone(),
                 artist_name: artist_name.clone(),
                 thumbnail_url: thumbnail_url.clone(),

@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2021-2025 tooboredtocode
+ * Copyright (c) 2021-2026 tooboredtocode
  * All Rights Reserved
  */
 
@@ -11,12 +11,15 @@ use crate::util::error::expect_err;
 use crate::util::odesli::OdesliClient;
 use crate::util::signal::start_signal_listener;
 use crate::util::{EmptyResult, create_termination_future};
+use migration::MigratorTrait;
 use prometheus_client::encoding::EncodeLabelValue;
 use reqwest::Client;
+use sea_orm::DatabaseConnection;
 use std::cmp::max;
 use std::sync::Arc;
 use std::time::Duration;
 use this_state::State as ThisState;
+use tracing::log::LevelFilter;
 use tracing::{error, info, instrument};
 use twilight_gateway::{ConfigBuilder as ShardConfigBuilder, Shard, create_iterator};
 use twilight_http::Client as TwilightClient;
@@ -60,8 +63,9 @@ pub struct Context {
 
     pub cfg: SavedConfig,
 
+    pub db_connection: Option<DatabaseConnection>,
     pub metrics: Metrics,
-    // TODO: add database for command invocation metrics
+
     pub state: ThisState<ClusterState>,
 }
 
@@ -77,6 +81,7 @@ impl Context {
         token: &str,
         debug_servers: &[u64],
         color_config: ColorConfig,
+        db_url: Option<&str>,
     ) -> EmptyResult<(Arc<Self>, impl ExactSizeIterator<Item = Shard>)> {
         info!("Creating Cluster");
 
@@ -110,6 +115,23 @@ impl Context {
             .build()
             .map_err(expect_err!("Failed to create HTTP client"))?;
 
+        let db_connection = if let Some(db_url) = db_url {
+            let mut connection_opts = sea_orm::ConnectOptions::new(db_url);
+            connection_opts.sqlx_logging_level(LevelFilter::Debug);
+
+            let db_connection = sea_orm::Database::connect(connection_opts)
+                .await
+                .map_err(expect_err!("Failed to connect to the database"))?;
+
+            migration::Migrator::up(&db_connection, None)
+                .await
+                .map_err(expect_err!("Failed to run database migrations"))?;
+
+            Some(db_connection)
+        } else {
+            None
+        };
+
         let ctx: Arc<_> = Context {
             image_client: ImageClient::new(http_client.clone(), color_config, &metrics),
             odesli_client: OdesliClient::new(http_client, &metrics),
@@ -118,6 +140,7 @@ impl Context {
             cfg: SavedConfig {
                 debug_server: debug_servers.to_vec(),
             },
+            db_connection,
             metrics,
             state,
         }

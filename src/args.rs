@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2021-2025 tooboredtocode
+ * Copyright (c) 2021-2026 tooboredtocode
  * All Rights Reserved
  */
 use clap::{Parser, ValueEnum};
@@ -17,6 +17,10 @@ pub struct Args {
     /// The port the metrics server will listen on
     #[clap(long, env = "METRICS_PORT", default_value_t = 8481)]
     pub metrics_port: u16,
+
+    /// The database url to send the metrics to
+    #[clap(long, env = "DATABASE_URL", hide_env_values = true)]
+    pub database_url: Option<String>,
 
     /// The log filter configuration (e.g. "info,my_crate=debug").
     #[clap(short, long, default_value = "info", env = "BOT_LOG")]

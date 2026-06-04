@@ -3,8 +3,16 @@
  * All Rights Reserved
  */
 
+use std::future::IntoFuture;
+use tracing::{Instrument, debug, debug_span, info, instrument, warn};
+use twilight_model::application::interaction::Interaction;
+use twilight_model::application::interaction::application_command::CommandData;
+use twilight_model::channel::message::MessageFlags;
+use url::Url;
+
 use crate::commands::share::ShareCommandData;
 use crate::context::Ctx;
+use crate::db::UsageData;
 use crate::handlers::interactions::common::{
     InvalidLink, VALID_DOMAINS_REGEX, additional_link_validation, build_components, data_routine,
 };
@@ -13,12 +21,6 @@ use crate::util::EmptyResult;
 use crate::util::error::expect_warn;
 use crate::util::interaction::{defer, get_options, respond_with, update_defer_with_error};
 use crate::util::odesli::ApiErr;
-use std::future::IntoFuture;
-use tracing::{Instrument, debug, debug_span, info, instrument, warn};
-use twilight_model::application::interaction::Interaction;
-use twilight_model::application::interaction::application_command::CommandData;
-use twilight_model::channel::message::MessageFlags;
-use url::Url;
 
 pub async fn handle(inter: Interaction, data: CommandData, context: Ctx) {
     // use an inner function to make splitting the code easier
@@ -54,6 +56,10 @@ async fn handle_inner(inter: Interaction, data: CommandData, context: Ctx) -> Em
         }
     };
 
+    let usage_data =
+        UsageData::from_share_command(&inter, url, &data.page_url, &entity, data.is_cached);
+    let db_future = tokio::spawn(usage_data.save_to_db(context.clone()));
+
     defer_future
         .await
         .map_err(expect_warn!("Failed to join the defer future"))??;
@@ -72,6 +78,10 @@ async fn handle_inner(inter: Interaction, data: CommandData, context: Ctx) -> Em
         .map_err(expect_warn!("Failed to send the response to the user"))?;
 
     debug!("Successfully sent Response");
+
+    db_future
+        .await
+        .map_err(expect_warn!("Failed to join the database future"))?;
 
     Ok(())
 }

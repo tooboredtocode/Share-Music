@@ -25,6 +25,8 @@ pub struct OdesliCache {
 
 #[derive(Clone)]
 pub struct OdesliClientResponse {
+    /// Indicates whether the response was retrieved from the cache or not. This is useful for logging and metrics purposes.
+    pub is_cached: bool,
     inner: Arc<DataCacheEntry>,
 }
 
@@ -74,7 +76,10 @@ impl OdesliCache {
             self.cache.insert(pid, entry.clone());
         }
 
-        OdesliClientResponse { inner: entry }
+        OdesliClientResponse {
+            is_cached: false,
+            inner: entry,
+        }
     }
 
     pub fn get_response(&self, provider_id: &ProviderId) -> Option<OdesliClientResponse> {
@@ -84,6 +89,7 @@ impl OdesliCache {
                 std::sync::atomic::Ordering::Relaxed,
             );
             Some(OdesliClientResponse {
+                is_cached: true,
                 inner: entry.clone(),
             })
         } else {
