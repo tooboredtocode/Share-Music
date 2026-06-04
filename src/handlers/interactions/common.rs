@@ -6,7 +6,7 @@
 use crate::context::Ctx;
 use crate::handlers::interactions::show_player::build_select_menu;
 use crate::util::colour::RGBPixel;
-use crate::util::odesli::{ApiErr, EntityData, OdesliResponse, Platform};
+use crate::util::odesli::{ApiErr, EntityData, OdesliClientResponse, OdesliResponse};
 use lazy_regex::{Lazy, lazy_regex};
 use regex::Regex;
 use tracing::{debug, instrument};
@@ -70,11 +70,9 @@ pub fn additional_link_validation(link: &Url) -> Result<(), InvalidLink> {
 pub async fn data_routine(
     url: &Url,
     context: &Ctx,
-) -> Result<(OdesliResponse, EntityData, Option<RGBPixel>), ApiErr> {
+) -> Result<(OdesliClientResponse, EntityData, Option<RGBPixel>), ApiErr> {
     debug!("Fetching information from API");
-    let mut data = context.odesli_client.fetch(url).await?;
-    fix_platform_links(&mut data);
-
+    let data = context.odesli_client.fetch(url).await?;
     let entity_data = data.get_data();
     debug!(
         "Got data from api: {} by {}",
@@ -95,29 +93,6 @@ pub async fn data_routine(
     };
 
     Ok((data, entity_data, color))
-}
-
-// Fixes the links for some platforms, so they work properly
-fn fix_platform_links(resp: &mut OdesliResponse) {
-    if let Some(links) = resp.links_by_platform.get_mut(&Platform::AppleMusic) {
-        let new = links.url.replace("geo.music.apple.com", "music.apple.com");
-        let mut new_iter = new.split('?');
-
-        let new = new_iter
-            .next()
-            .expect("A split should always return something");
-        if let Some(query) = new_iter.next() {
-            let song_id = query.split('&').find(|s| s.starts_with("i="));
-            if let Some(song_id) = song_id {
-                links.url = format!("{}?{}", new, song_id);
-            } else {
-                // Just return the album link
-                links.url = new.to_string();
-            }
-        } else {
-            links.url = new.to_string();
-        }
-    }
 }
 
 fn unfurled_media_item_from_url(url: String) -> UnfurledMediaItem {

@@ -5,20 +5,27 @@
 
 use crate::util::odesli::OdesliResponse;
 use crate::util::odesli::provider_id::ProviderId;
+use core::fmt;
 use dashmap::DashMap;
+use std::ops::Deref;
 use std::sync::Arc;
 use std::sync::atomic::AtomicU64;
 use std::time::{Duration, SystemTime, UNIX_EPOCH};
 use tracing::warn;
 use url::Url;
 
-struct DataCacheEntry {
+pub(super) struct DataCacheEntry {
     response: OdesliResponse,
     last_access: AtomicU64,
 }
 
 pub struct OdesliCache {
     cache: DashMap<ProviderId, Arc<DataCacheEntry>>,
+}
+
+#[derive(Clone)]
+pub struct OdesliClientResponse {
+    inner: Arc<DataCacheEntry>,
 }
 
 impl OdesliCache {
@@ -28,8 +35,14 @@ impl OdesliCache {
         }
     }
 
-    pub fn store_response(&self, response: &OdesliResponse) {
-        let provider_ids = response
+    pub fn store_response(&self, response: OdesliResponse) -> OdesliClientResponse {
+        let entry = Arc::new(DataCacheEntry {
+            response,
+            last_access: AtomicU64::new(Self::current_timestamp()),
+        });
+
+        let provider_ids = entry
+            .response
             .links_by_platform
             .iter()
             .filter_map(|(platform, links)| {
@@ -57,22 +70,22 @@ impl OdesliCache {
                 }
             });
 
-        let entry = Arc::new(DataCacheEntry {
-            response: response.clone(),
-            last_access: AtomicU64::new(Self::current_timestamp()),
-        });
         for pid in provider_ids {
             self.cache.insert(pid, entry.clone());
         }
+
+        OdesliClientResponse { inner: entry }
     }
 
-    pub fn get_response(&self, provider_id: &ProviderId) -> Option<OdesliResponse> {
+    pub fn get_response(&self, provider_id: &ProviderId) -> Option<OdesliClientResponse> {
         if let Some(entry) = self.cache.get(provider_id) {
             entry.last_access.store(
                 Self::current_timestamp(),
                 std::sync::atomic::Ordering::Relaxed,
             );
-            Some(entry.response.clone())
+            Some(OdesliClientResponse {
+                inner: entry.clone(),
+            })
         } else {
             None
         }
@@ -91,5 +104,19 @@ impl OdesliCache {
             .duration_since(UNIX_EPOCH)
             .unwrap()
             .as_secs()
+    }
+}
+
+impl Deref for OdesliClientResponse {
+    type Target = OdesliResponse;
+
+    fn deref(&self) -> &Self::Target {
+        &self.inner.response
+    }
+}
+
+impl fmt::Debug for OdesliClientResponse {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        fmt::Debug::fmt(self.deref(), f)
     }
 }

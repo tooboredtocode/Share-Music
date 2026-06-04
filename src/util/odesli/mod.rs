@@ -3,9 +3,6 @@
  * All Rights Reserved
  */
 
-use crate::context::metrics::{Metrics as CtxMetrics, ThirdPartyLabels};
-use crate::util::odesli::cache::OdesliCache;
-use crate::util::odesli::endpoints::OdesliEndpoints;
 use prometheus_client::metrics::family::Family;
 use prometheus_client::metrics::histogram::Histogram;
 use reqwest::StatusCode;
@@ -15,14 +12,19 @@ use std::time::{Duration, Instant};
 use tracing::{Instrument, debug, instrument};
 use url::Url;
 
+use crate::context::metrics::{Metrics as CtxMetrics, ThirdPartyLabels};
+use crate::util::odesli::cache::OdesliCache;
+use crate::util::odesli::endpoints::OdesliEndpoints;
+use crate::util::odesli::provider_id::ProviderId;
+
 mod api_type;
 mod cache;
 mod endpoints;
 mod error;
 mod provider_id;
 
-use crate::util::odesli::provider_id::ProviderId;
 pub use api_type::*;
+pub use cache::OdesliClientResponse;
 pub use error::ApiErr;
 
 pub struct OdesliClient {
@@ -59,7 +61,7 @@ impl OdesliClient {
     }
 
     #[instrument(level = "debug", skip_all)]
-    pub async fn fetch(&self, url: &Url) -> Result<OdesliResponse, ApiErr> {
+    pub async fn fetch(&self, url: &Url) -> Result<OdesliClientResponse, ApiErr> {
         match ProviderId::parse_url(url) {
             Ok(provider_id) => {
                 if let Some(cached) = self.cache.get_response(&provider_id) {
@@ -119,9 +121,33 @@ impl OdesliClient {
             }
         }
 
-        let res = resp.json::<OdesliResponse>().await?;
-        self.cache.store_response(&res);
+        let mut api_response = resp.json::<OdesliResponse>().await?;
+        fix_platform_links(&mut api_response);
+        let client_response = self.cache.store_response(api_response);
 
-        Ok(res)
+        Ok(client_response)
+    }
+}
+
+// Fixes the links for some platforms, so they work properly
+fn fix_platform_links(resp: &mut OdesliResponse) {
+    if let Some(links) = resp.links_by_platform.get_mut(&Platform::AppleMusic) {
+        let new = links.url.replace("geo.music.apple.com", "music.apple.com");
+        let mut new_iter = new.split('?');
+
+        let new = new_iter
+            .next()
+            .expect("A split should always return something");
+        if let Some(query) = new_iter.next() {
+            let song_id = query.split('&').find(|s| s.starts_with("i="));
+            if let Some(song_id) = song_id {
+                links.url = format!("{}?{}", new, song_id);
+            } else {
+                // Just return the album link
+                links.url = new.to_string();
+            }
+        } else {
+            links.url = new.to_string();
+        }
     }
 }
