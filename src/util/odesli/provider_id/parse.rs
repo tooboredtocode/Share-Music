@@ -120,9 +120,16 @@ impl AppleMusicId {
 
         let _country_code = path_segments.next()?;
         let content_type = path_segments.next()?;
-        let _album_name = path_segments.next()?;
-        let album_id = path_segments.next()?.parse().ok()?;
+        let _item_name = path_segments.next()?;
+        let id = path_segments.next()?.parse().ok()?;
 
+        // If it's a song, the id is in the path and we can return immediately.
+        if content_type == "song" {
+            return Some(Self::Track(id));
+        }
+
+        // If it's an album, we need to check for a track ID in the query parameters.
+        // If there is one, it's a track URL, otherwise it's an album URL.
         if content_type != "album" {
             return None;
         }
@@ -136,8 +143,8 @@ impl AppleMusicId {
         });
 
         match track_id {
-            Some(track_id) => Some(Self::Track { album_id, track_id }),
-            None => Some(Self::Album(album_id)),
+            Some(track_id) => Some(Self::Track(track_id)),
+            None => Some(Self::Album(id)),
         }
     }
 }
@@ -251,7 +258,7 @@ impl ProviderId {
             "open.spotify.com" => SpotifyId::from_url(url).map(Self::Spotify),
             "listen.tidal.com" => TidalId::from_url(url).map(Self::Tidal),
             "music.yandex.ru" => YandexId::from_url(url).map(Self::Yandex),
-            "www.youtube.com" => YouTubeId::from_url(url).map(Self::YouTube),
+            "www.youtube.com" | "music.youtube.com" => YouTubeId::from_url(url).map(Self::YouTube),
             other_domain => {
                 return Err(InvalidProviderUrl {
                     invalid_url: url.clone(),
