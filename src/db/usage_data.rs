@@ -153,7 +153,7 @@ impl UsageData {
                 debug!("Successfully saved multiple command usage data to the database");
             }
             Err(e) => {
-                debug!(
+                warn!(
                     "Failed to save multiple command usage data to the database: {:?}",
                     e
                 );

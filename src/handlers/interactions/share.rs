@@ -58,14 +58,13 @@ async fn handle_inner(inter: Interaction, data: CommandData, context: Ctx) -> Em
 
     let usage_data =
         UsageData::from_share_command(&inter, url, &data.page_url, &entity, data.is_cached);
-    let db_future = tokio::spawn(usage_data.save_to_db(context.clone()));
+
+    // No need to pass an index since we only have one link, and thus one component
+    let components = build_components(&data, entity, color, None);
 
     defer_future
         .await
         .map_err(expect_warn!("Failed to join the defer future"))?;
-
-    // No need to pass an index since we only have one link, and thus one component
-    let components = build_components(&data, entity, color, None);
 
     context
         .interaction_client()
@@ -77,11 +76,8 @@ async fn handle_inner(inter: Interaction, data: CommandData, context: Ctx) -> Em
         .await
         .map_err(expect_warn!("Failed to send the response to the user"))?;
 
-    debug!("Successfully sent Response");
-
-    db_future
-        .await
-        .map_err(expect_warn!("Failed to join the database future"))?;
+    debug!("Successfully sent Response, spawning task to save command usage data to the database");
+    tokio::spawn(usage_data.save_to_db(context.clone()));
 
     Ok(())
 }

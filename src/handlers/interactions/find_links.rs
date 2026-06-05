@@ -88,8 +88,6 @@ async fn handle_inner(inter: Interaction, data: CommandData, context: Ctx) -> Em
         components.extend(build_components(&data, entity, color, Some(idx as u16)));
     }
 
-    let db_future = tokio::spawn(UsageData::save_multi_to_db(usage_data, context.clone()));
-
     defer_future
         .await
         .map_err(expect_warn!("Failed to join the defer future"))?;
@@ -104,11 +102,8 @@ async fn handle_inner(inter: Interaction, data: CommandData, context: Ctx) -> Em
         .await
         .map_err(expect_warn!("Failed to send the response to the user"))?;
 
-    debug!("Successfully sent Response");
-
-    db_future
-        .await
-        .map_err(expect_warn!("Failed to join the database future"))?;
+    debug!("Successfully sent Response, spawning task to save command usage data to the database");
+    tokio::spawn(UsageData::save_multi_to_db(usage_data, context.clone()));
 
     Ok(())
 }
