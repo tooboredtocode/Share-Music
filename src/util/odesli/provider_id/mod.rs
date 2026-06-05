@@ -23,12 +23,7 @@ pub enum AmazonMusicId {
 
 create_provider_id!(AnghamiId, u64);
 create_provider_id!(AppleMusicId, u64);
-
-#[derive(Debug, PartialEq, Eq, Hash)]
-pub enum BoomPlayId {
-    Album(u64),
-}
-
+create_provider_id!(BoomPlayId, u64);
 create_provider_id!(DeezerId, u64);
 create_provider_id!(NapsterId, u64);
 create_provider_id!(PandoraId, u64);

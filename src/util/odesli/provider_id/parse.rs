@@ -149,10 +149,7 @@ impl AppleMusicId {
     }
 }
 
-impl_parse_track_album_providers!(BoomPlayId, (
-    "albums" => Album
-));
-
+impl_parse_track_album_providers!(BoomPlayId, "songs", "albums");
 impl_parse_track_album_providers!(DeezerId);
 
 impl NapsterId {
