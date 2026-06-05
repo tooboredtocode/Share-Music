@@ -57,7 +57,7 @@ pub fn get_message(data: &CommandData) -> EmptyResult<&Message> {
     }
 }
 
-pub fn defer(inter: &Interaction, context: &Ctx) -> JoinHandle<EmptyResult<()>> {
+pub fn defer(inter: &Interaction, context: &Ctx) -> JoinHandle<()> {
     let inter_id = inter.id;
     let inter_token = inter.token.clone();
     let ctx = context.clone();
@@ -76,11 +76,8 @@ pub fn defer(inter: &Interaction, context: &Ctx) -> JoinHandle<EmptyResult<()>> 
                 )
                 .await
             {
-                warn!("Failed to defer Response, aborting handler: {}", e);
-                return Err(());
+                warn!("Failed to defer Response, this may cause the Interaction to fail: {e}");
             }
-
-            Ok(())
         }
         .instrument(debug_span!("deferring_response")),
     )

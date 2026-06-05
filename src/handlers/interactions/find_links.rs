@@ -92,7 +92,7 @@ async fn handle_inner(inter: Interaction, data: CommandData, context: Ctx) -> Em
 
     defer_future
         .await
-        .map_err(expect_warn!("Failed to join the defer future"))??;
+        .map_err(expect_warn!("Failed to join the defer future"))?;
 
     context
         .interaction_client()

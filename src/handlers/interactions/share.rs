@@ -62,7 +62,7 @@ async fn handle_inner(inter: Interaction, data: CommandData, context: Ctx) -> Em
 
     defer_future
         .await
-        .map_err(expect_warn!("Failed to join the defer future"))??;
+        .map_err(expect_warn!("Failed to join the defer future"))?;
 
     // No need to pass an index since we only have one link, and thus one component
     let components = build_components(&data, entity, color, None);
