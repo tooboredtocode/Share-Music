@@ -3,21 +3,25 @@
  * All Rights Reserved
  */
 
-use crate::context::Ctx;
-use crate::db::entity::command_usage;
-use crate::db::entity::sea_orm_active_enums::CommandSource as DbCommandSource;
-use crate::util::odesli::EntityData;
 use sea_orm::{EntityTrait, Set};
 use tracing::{debug, trace, warn};
 use twilight_model::application::interaction::Interaction;
 use twilight_model::id::Id;
 use twilight_model::id::marker::{ChannelMarker, GuildMarker, InteractionMarker, UserMarker};
 
+use crate::context::Ctx;
+use crate::db::entity::command_usage;
+use crate::db::entity::sea_orm_active_enums::CommandSource as DbCommandSource;
+use crate::db::util::snowflake_to_db;
+use crate::util::odesli::EntityData;
+
+#[derive(Debug, PartialEq, Eq)]
 pub enum CommandSource {
     ShareCommand,
     FindLinksCommand,
 }
 
+#[derive(Debug)]
 pub struct UsageData {
     pub interaction_id: Id<InteractionMarker>,
     pub original_url: String,
@@ -131,7 +135,7 @@ impl UsageData {
                 debug!("Successfully saved command usage data to the database");
             }
             Err(e) => {
-                warn!("Failed to save command usage data to the database: {:?}", e);
+                warn!("Failed to save command usage data to the database: {}", e);
             }
         }
     }
@@ -160,8 +164,4 @@ impl UsageData {
             }
         }
     }
-}
-
-fn snowflake_to_db<T>(id: Id<T>) -> i64 {
-    id.get() as i64
 }
