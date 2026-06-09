@@ -2,8 +2,9 @@
  * Copyright (c) 2021-2026 tooboredtocode
  * All Rights Reserved
  */
-
 use futures_util::future::try_join_all;
+use std::fmt;
+use std::fmt::Write;
 use std::future::IntoFuture;
 use tracing::{Instrument, debug, debug_span, instrument, warn};
 use twilight_model::application::interaction::Interaction;
@@ -53,21 +54,30 @@ async fn handle_inner(inter: Interaction, data: CommandData, context: Ctx) -> Em
     }
 
     debug!(
-        links = ?links,
+        links = %LoggerLinks(&links),
         "Found links in message, deferring Response"
     );
     let defer_future = defer(&inter, &context);
 
     debug!("Starting Routine for each link");
-    let futures = links.into_iter().map(async |link| {
-        let (data, entity, colour) = data_routine(&link, &context).await?;
-        Ok::<_, ApiErr>((link.clone(), data, entity, colour))
-    });
+    let futures = links
+        .into_iter()
+        .map(async |link| match data_routine(&link, &context).await {
+            Ok((data, entity, colour)) => Ok(Some((link.clone(), data, entity, colour))),
+            Err(ApiErr::ClientError(e)) => {
+                debug!(
+                    "Odesli API returned a client error for link {}, skipping it: {}",
+                    link, e
+                );
+                Ok(None)
+            }
+            Err(e) => Err(e),
+        });
 
     let data = match try_join_all(futures).await {
         Ok(data) => data,
         Err(e) => {
-            warn!(failed_with = %e, "Failed to fetch data for some of the links");
+            warn!("Odesli API request failed, informing user: {}", e);
             update_defer_with_error(&inter, &context, messages::error((&inter.locale).into()))
                 .await;
             return Err(());
@@ -77,7 +87,7 @@ async fn handle_inner(inter: Interaction, data: CommandData, context: Ctx) -> Em
     let mut usage_data = Vec::with_capacity(data.len());
     let mut components = Vec::with_capacity(data.len());
 
-    for (idx, (link, data, entity, color)) in data.into_iter().enumerate() {
+    for (idx, (link, data, entity, color)) in data.into_iter().flatten().enumerate() {
         usage_data.push(UsageData::from_find_links_command(
             &inter,
             link,
@@ -106,4 +116,21 @@ async fn handle_inner(inter: Interaction, data: CommandData, context: Ctx) -> Em
     tokio::spawn(UsageData::save_multi_to_db(usage_data, context.clone()));
 
     Ok(())
+}
+
+struct LoggerLinks<'a>(&'a [Url]);
+
+impl<'a> fmt::Display for LoggerLinks<'a> {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        f.write_char('[')?;
+        let mut iter = self.0.iter();
+        if let Some(first) = iter.next() {
+            f.write_str(first.as_str())?;
+        }
+        for url in iter {
+            f.write_str(", ")?;
+            f.write_str(url.as_str())?;
+        }
+        f.write_char(']')
+    }
 }

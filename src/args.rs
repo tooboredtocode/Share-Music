@@ -14,6 +14,13 @@ pub struct Args {
     #[clap(long, env = "DISCORD_DEBUG_SERVER")]
     pub debug_server: Vec<u64>,
 
+    /// The api key for the Odesli API
+    #[clap(long = "api-key", env = "ODESLI_API_KEY", hide_env_values = true)]
+    pub odesli_api_key: Option<String>,
+    /// The hourly limit for the Odesli API
+    #[clap(long = "odesli-hourly-limit", env = "ODESLI_HOURLY_LIMIT")]
+    pub odesli_hourly_limit: Option<u32>,
+
     /// The port the metrics server will listen on
     #[clap(long, env = "METRICS_PORT", default_value_t = 8481)]
     pub metrics_port: u16,
@@ -25,7 +32,6 @@ pub struct Args {
     /// The log filter configuration (e.g. "info,my_crate=debug").
     #[clap(short, long, default_value = "info", env = "BOT_LOG")]
     pub log: String,
-
     /// The log format configuration
     #[clap(long, default_value = "logfmt", env = "BOT_LOG_FORMAT")]
     pub log_format: LogFormat,

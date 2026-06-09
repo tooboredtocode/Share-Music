@@ -3,14 +3,6 @@
  * All Rights Reserved
  */
 
-use crate::color_config::ColorConfig;
-use crate::constants::cluster_consts;
-use crate::context::metrics::Metrics;
-use crate::util::colour::ImageClient;
-use crate::util::error::expect_err;
-use crate::util::odesli::OdesliClient;
-use crate::util::signal::start_signal_listener;
-use crate::util::{EmptyResult, create_termination_future};
 use migration::MigratorTrait;
 use prometheus_client::encoding::EncodeLabelValue;
 use reqwest::Client;
@@ -25,6 +17,16 @@ use twilight_gateway::{ConfigBuilder as ShardConfigBuilder, Shard, create_iterat
 use twilight_http::Client as TwilightClient;
 use twilight_model::id::Id;
 use twilight_model::id::marker::ApplicationMarker;
+
+use crate::args::Args;
+use crate::color_config::ColorConfig;
+use crate::constants::cluster_consts;
+use crate::context::metrics::Metrics;
+use crate::util::colour::ImageClient;
+use crate::util::error::expect_err;
+use crate::util::odesli::OdesliClient;
+use crate::util::signal::start_signal_listener;
+use crate::util::{EmptyResult, create_termination_future};
 
 mod discord_client;
 pub mod metrics;
@@ -78,10 +80,8 @@ pub type Ctx = Arc<Context>;
 
 impl Context {
     pub async fn new(
-        token: &str,
-        debug_servers: &[u64],
+        args: &Args,
         color_config: ColorConfig,
-        db_url: Option<&str>,
     ) -> EmptyResult<(Arc<Self>, impl ExactSizeIterator<Item = Shard>)> {
         info!("Creating Cluster");
 
@@ -104,9 +104,9 @@ impl Context {
 
         start_signal_listener(state.clone());
 
-        let (discord_client, bot_id) = Self::discord_client_from_config(token).await?;
+        let (discord_client, bot_id) = Self::discord_client_from_config(&args.token).await?;
         let discord_shards =
-            Self::create_shards(&discord_client, token, cluster_id, cluster_count).await?;
+            Self::create_shards(&discord_client, &args.token, cluster_id, cluster_count).await?;
 
         let http_client = Client::builder()
             .user_agent(crate::constants::USER_AGENT)
@@ -115,7 +115,7 @@ impl Context {
             .build()
             .map_err(expect_err!("Failed to create HTTP client"))?;
 
-        let db_connection = if let Some(db_url) = db_url {
+        let db_connection = if let Some(db_url) = &args.database_url {
             let mut connection_opts = sea_orm::ConnectOptions::new(db_url);
             connection_opts.sqlx_logging_level(LevelFilter::Debug);
 
@@ -132,13 +132,21 @@ impl Context {
             None
         };
 
+        let mut odesli_client = OdesliClient::new(http_client.clone(), &metrics);
+        if let Some(api_key) = &args.odesli_api_key {
+            odesli_client = odesli_client.with_api_key(api_key)
+        }
+        if let Some(hourly_limit) = args.odesli_hourly_limit {
+            odesli_client = odesli_client.with_hourly_limit(hourly_limit);
+        }
+
         let ctx: Arc<_> = Context {
-            image_client: ImageClient::new(http_client.clone(), color_config, &metrics),
-            odesli_client: OdesliClient::new(http_client, &metrics),
+            image_client: ImageClient::new(http_client, color_config, &metrics),
+            odesli_client,
             discord_client,
             bot_id,
             cfg: SavedConfig {
-                debug_server: debug_servers.to_vec(),
+                debug_server: args.debug_server.clone(),
             },
             db_connection,
             metrics,

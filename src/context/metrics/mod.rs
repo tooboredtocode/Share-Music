@@ -40,6 +40,7 @@ pub struct Metrics {
     pub cluster_state: Family<ClusterLabels, Gauge>,
 
     pub third_party_api: Family<ThirdPartyLabels, Histogram>,
+    pub third_party_api_waiting: Family<ThirdPartyWaitingLabels, Gauge>,
 }
 
 #[derive(Clone, Debug, Hash, PartialEq, Eq, EncodeLabelSet)]
@@ -85,6 +86,19 @@ pub struct ThirdPartyLabels {
     pub status: u16,
 }
 
+#[derive(Copy, Clone, Debug, Hash, PartialEq, Eq, EncodeLabelValue)]
+pub enum RequestWaitingState {
+    Ratelimited,
+    WaitingForResponse,
+}
+
+#[derive(Clone, Debug, Hash, PartialEq, Eq, EncodeLabelSet)]
+pub struct ThirdPartyWaitingLabels {
+    pub method: Method,
+    pub url: Cow<'static, str>,
+    pub state: RequestWaitingState,
+}
+
 #[derive(Clone, Debug, Hash, PartialEq, Eq, EncodeLabelValue)]
 #[allow(clippy::upper_case_acronyms)]
 pub enum Method {
@@ -118,10 +132,31 @@ impl From<reqwest::Method> for Method {
 
 impl Metrics {
     pub fn new(cluster_id: u16) -> Self {
-        let mut registry = Registry::with_prefix("discord");
-        let mut r = registry
-            .sub_registry_with_label((Cow::from("cluster"), Cow::from(cluster_id.to_string())));
-        r = r.sub_registry_with_label((Cow::from("bot"), Cow::from(NAME)));
+        let registry = Registry::with_prefix_and_labels(
+            "discord",
+            [
+                (Cow::from("cluster"), Cow::from(cluster_id.to_string())),
+                (Cow::from("bot"), Cow::from(NAME)),
+            ]
+            .into_iter(),
+        );
+
+        let mut this = Self {
+            registry,
+            gateway_events: Default::default(),
+            connected_guilds: Default::default(),
+            guild_store: GuildStore::new(),
+            shard_states: Default::default(),
+            current_states: Default::default(),
+            shard_latencies: Default::default(),
+            cluster_state: Default::default(),
+            third_party_api: Family::<ThirdPartyLabels, Histogram>::new_with_constructor(|| {
+                Histogram::new([
+                    0.1, 0.15, 0.2, 0.3, 0.5, 0.75, 1.0, 1.5, 2.0, 3.0, 5.0, 7.5, 10.0, 15.0, 20.0,
+                ])
+            }),
+            third_party_api_waiting: Default::default(),
+        };
 
         let version = Family::<VersionLabels, Gauge>::default();
         version
@@ -132,65 +167,50 @@ impl Metrics {
                 version: VERSION.to_string(),
             })
             .set(1);
-        r.register("bot_info", "Information about the bot", version);
+        this.registry
+            .register("bot_info", "Information about the bot", version);
 
-        let gateway_events = Family::<EventLabels, Counter>::default();
-        r.register(
+        this.registry.register(
             "gateway_events",
             "Received gateway events",
-            gateway_events.clone(),
+            this.gateway_events.clone(),
         );
-
-        let shard_states = Family::<ShardStateLabels, Gauge>::default();
-        r.register("shard_states", "States of the shards", shard_states.clone());
-
-        let shard_latencies = Family::<ShardLatencyLabels, Gauge<f64, AtomicU64>>::default();
-        r.register_with_unit(
+        this.registry.register(
+            "guilds",
+            "Guilds Connected to the bot",
+            this.connected_guilds.clone(),
+        );
+        this.registry.register(
+            "shard_states",
+            "States of the shards",
+            this.shard_states.clone(),
+        );
+        this.registry.register_with_unit(
             "shard_latencies",
             "Latencies of the shards",
             Unit::Seconds,
-            shard_latencies.clone(),
+            this.shard_latencies.clone(),
         );
-
-        let connected_guilds = Family::<GuildLabels, Gauge>::default();
-        r.register(
-            "guilds",
-            "Guilds Connected to the bot",
-            connected_guilds.clone(),
-        );
-        let guild_store = GuildStore::new();
-
-        let cluster_state = Family::<ClusterLabels, Gauge>::default();
-        r.register("cluster_state", "Cluster state", cluster_state.clone());
-
-        let third_party_api = Family::<ThirdPartyLabels, Histogram>::new_with_constructor(|| {
-            Histogram::new([
-                0.1, 0.15, 0.2, 0.3, 0.5, 0.75, 1.0, 1.5, 2.0, 3.0, 5.0, 7.5, 10.0, 15.0, 20.0,
-            ])
-        });
-        r.register(
+        this.registry
+            .register("cluster_state", "Cluster state", this.cluster_state.clone());
+        this.registry.register(
             "3rd_party_api_request_duration_seconds",
             "Response time for the various APIs used by the bots",
-            third_party_api.clone(),
+            this.third_party_api.clone(),
+        );
+        this.registry.register(
+            "3rd_party_api_waiting_requests",
+            "Number of requests currently waiting for a response from the various APIs used by the bots",
+            this.third_party_api_waiting.clone(),
         );
 
-        cluster_state
+        this.cluster_state
             .get_or_create(&ClusterLabels {
                 state: ClusterState::Starting,
             })
             .set(1);
 
-        Self {
-            registry,
-            gateway_events,
-            connected_guilds,
-            guild_store,
-            shard_states,
-            current_states: Mutex::new(HashMap::new()),
-            shard_latencies,
-            cluster_state,
-            third_party_api,
-        }
+        this
     }
 
     pub fn update_cluster_metrics(&self, shard: &Shard, event: &Event, ctx: &Ctx) {

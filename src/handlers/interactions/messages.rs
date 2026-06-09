@@ -4,6 +4,7 @@
  */
 
 use crate::util::discord_locales::DiscordLocale;
+use crate::util::odesli::ApiClientErr;
 
 #[inline]
 pub const fn invalid_url(locale: DiscordLocale) -> &'static str {
@@ -83,12 +84,17 @@ pub const fn select_menu_with_depreciated_lookup_link(locale: DiscordLocale) -> 
 }
 
 #[inline]
-pub const fn ratelimit_exceeded(locale: DiscordLocale) -> &'static str {
-    match locale {
-        DiscordLocale::German => {
-            "Die Links konnten momentan leider nicht abgerufen werden, bitte versuche es später noch einmal"
+pub fn api_client_error_message(err: ApiClientErr, locale: DiscordLocale) -> &'static str {
+    match (err, locale) {
+        (ApiClientErr::UnknownEntity, DiscordLocale::German) => {
+            "Zu diesem Link konnte leider kein passender Inhalt gefunden werden, bitte überprüfe den Link und versuche es erneut\n\
+            -# Wenn du denkst, dass dies ein Fehler ist, öffne einen Report [hier](<https://github.com/tooboredtocode/Share-Music/issues>)"
         }
-        _ => "The Links could not be fetched at this time, please try again later",
+        (ApiClientErr::UnknownEntity, _) => {
+            "Unfortunately, no matching content could be found for this link, please check the link and try again\n\
+            -# If you think this is a mistake, open an issue [here](<https://github.com/tooboredtocode/Share-Music/issues>)"
+        }
+        _ => error(locale),
     }
 }
 

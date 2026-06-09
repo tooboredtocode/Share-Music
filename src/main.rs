@@ -50,13 +50,7 @@ async fn async_main(args: Args, color_config: ColorConfig) -> EmptyResult<()> {
     setup_logger::setup(&args.log, args.log_format);
     info!("{} v{} initializing!", constants::NAME, constants::VERSION);
 
-    let (context, shards) = Context::new(
-        &args.token,
-        &args.debug_server,
-        color_config,
-        args.database_url.as_deref(),
-    )
-    .await?;
+    let (context, shards) = Context::new(&args, color_config).await?;
     context.start_status_server(args.metrics_port).await?;
     commands::sync_commands(&context).await?;
 

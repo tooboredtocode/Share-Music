@@ -19,11 +19,10 @@ pub(super) struct DataCacheEntry {
     last_access: AtomicU64,
 }
 
-pub struct OdesliCache {
+pub(super) struct OdesliCache {
     cache: DashMap<ProviderId, Arc<DataCacheEntry>>,
 }
 
-#[derive(Clone)]
 pub struct OdesliClientResponse {
     /// Indicates whether the response was retrieved from the cache or not. This is useful for logging and metrics purposes.
     pub is_cached: bool,
@@ -110,6 +109,16 @@ impl OdesliCache {
             .duration_since(UNIX_EPOCH)
             .unwrap()
             .as_secs()
+    }
+}
+
+impl OdesliClientResponse {
+    pub fn duplicate(&self) -> Self {
+        OdesliClientResponse {
+            // Duplicating the response dictates that it is cached.
+            is_cached: true,
+            inner: self.inner.clone(),
+        }
     }
 }
 

@@ -7,7 +7,14 @@ mod parse;
 
 macro_rules! create_provider_id {
     ($name:ident, $ty:ty) => {
-        #[derive(Debug, PartialEq, Eq, Hash)]
+        #[derive(Debug, Clone, Copy, PartialEq, Eq, Hash)]
+        pub enum $name {
+            Album($ty),
+            Track($ty),
+        }
+    };
+    ($name:ident, $ty:ty, NoCopy) => {
+        #[derive(Debug, Clone, PartialEq, Eq, Hash)]
         pub enum $name {
             Album($ty),
             Track($ty),
@@ -15,7 +22,7 @@ macro_rules! create_provider_id {
     };
 }
 
-#[derive(Debug, PartialEq, Eq, Hash)]
+#[derive(Debug, Clone, PartialEq, Eq, Hash)]
 pub enum AmazonMusicId {
     Album(String),
     Track { album_id: String, track_id: String },
@@ -27,14 +34,14 @@ create_provider_id!(BoomPlayId, u64);
 create_provider_id!(DeezerId, u64);
 create_provider_id!(NapsterId, u64);
 create_provider_id!(PandoraId, u64);
-create_provider_id!(SpotifyId, String);
+create_provider_id!(SpotifyId, String, NoCopy);
 create_provider_id!(TidalId, u64);
 create_provider_id!(YandexId, u64);
 
-#[derive(Debug, PartialEq, Eq, Hash)]
+#[derive(Debug, Clone, PartialEq, Eq, Hash)]
 pub struct YouTubeId(String);
 
-#[derive(Debug, PartialEq, Eq, Hash)]
+#[derive(Debug, Clone, PartialEq, Eq, Hash)]
 pub enum ProviderId {
     AmazonMusic(AmazonMusicId),
     Anghami(AnghamiId),

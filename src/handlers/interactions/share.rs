@@ -4,7 +4,7 @@
  */
 
 use std::future::IntoFuture;
-use tracing::{Instrument, debug, debug_span, info, instrument, warn};
+use tracing::{Instrument, debug, debug_span, instrument, warn};
 use twilight_model::application::interaction::Interaction;
 use twilight_model::application::interaction::application_command::CommandData;
 use twilight_model::channel::message::MessageFlags;
@@ -41,16 +41,18 @@ async fn handle_inner(inter: Interaction, data: CommandData, context: Ctx) -> Em
         Ok(data) => data,
         Err(e) => {
             let message = match e {
-                ApiErr::RateLimitExceeded => {
-                    info!("Rate limit exceeded when trying to get the data from the api");
-                    messages::ratelimit_exceeded((&inter.locale).into())
+                ApiErr::ClientError(err) => {
+                    debug!(
+                        "Odesli API returned a client error, informing user: {}",
+                        err
+                    );
+                    messages::api_client_error_message(err, (&inter.locale).into())
                 }
                 _ => {
-                    warn!(failed_with = %e, "Failed to get the data from the api");
+                    warn!("Odesli API request failed, informing user: {}", e);
                     messages::error((&inter.locale).into())
                 }
             };
-
             update_defer_with_error(&inter, &context, message).await;
             return Err(());
         }

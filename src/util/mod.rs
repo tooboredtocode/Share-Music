@@ -7,6 +7,7 @@ use this_state::{State as ThisState, StateFuture};
 
 use crate::context::ClusterState;
 
+pub mod atomic_queue;
 pub mod colour;
 pub mod discord_locales;
 pub mod error;
@@ -15,6 +16,7 @@ pub mod odesli;
 pub mod setup_logger;
 pub mod shard_poller;
 pub mod signal;
+pub mod token_bucket;
 
 pub use error::EmptyResult;
 
