@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2021-2025 tooboredtocode
+ * Copyright (c) 2021-2026 tooboredtocode
  * All Rights Reserved
  */
 
@@ -9,7 +9,6 @@ use prometheus_client::metrics::family::Family;
 use prometheus_client::metrics::histogram::Histogram;
 use std::borrow::Cow;
 use std::fmt;
-use std::time::Instant;
 use tracing::{Instrument, debug, debug_span, instrument};
 use url::Host;
 
@@ -18,6 +17,9 @@ use crate::constants::colour_consts;
 use crate::context::metrics::{Method, Metrics as CtxMetrics, ThirdPartyLabels};
 use crate::util::EmptyResult;
 use crate::util::error::expect_warn;
+use crate::util::metric_utils::{
+    HasHistogramFamilyExt, TimeFutureExt, UnpackErr, has_histogram_families,
+};
 
 mod hsl_pixel;
 mod pixel_group;
@@ -69,6 +71,10 @@ pub struct ImageClient {
 struct ImageMetrics {
     third_party_api: Family<ThirdPartyLabels, Histogram>,
 }
+
+has_histogram_families!(ImageMetrics, (
+    third_party_api: ThirdPartyLabels
+));
 
 impl fmt::Debug for ImageClient {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
@@ -156,23 +162,23 @@ impl ImageClient {
             req.url().host().unwrap_or(Host::Domain("unknown.host"))
         );
 
-        let now = Instant::now();
-        let resp = self
+        let (resp, diff) = self
             .client
             .execute(req)
             .instrument(debug_span!("http_request"))
+            .time()
             .await
+            .unpack_err()
             .map_err(expect_warn!("Failed to fetch thumbnail"))?;
-        let diff = now.elapsed();
 
-        self.metrics
-            .third_party_api
-            .get_or_create(&ThirdPartyLabels {
+        self.metrics.observe_duration(
+            ThirdPartyLabels {
                 method: Method::GET,
                 url: Cow::from(metrics_url),
                 status: resp.status().into(),
-            })
-            .observe(diff.as_secs_f64());
+            },
+            diff,
+        );
 
         const EMPTY: &[u8] = &[];
         let bytes = resp

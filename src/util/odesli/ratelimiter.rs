@@ -1,3 +1,8 @@
+/*
+ * Copyright (c) 2021-2026 tooboredtocode
+ * All Rights Reserved
+ */
+
 use crate::util::atomic_queue::AtomicQueue;
 use crate::util::token_bucket::TokenBucket;
 use std::time::Duration;
@@ -19,6 +24,12 @@ impl OdesliRateLimiter {
         }
     }
 
+    /// Returns the number of tokens currently available in the bucket.
+    pub fn tokens_available(&self) -> usize {
+        self.bucket.tokens_available()
+    }
+
+    /// Acquires a token from the bucket, waiting if necessary until one is available.
     pub async fn acquire(&self) {
         // Increment the queue and get the current position
         let queue_guard = self.queue.enter();

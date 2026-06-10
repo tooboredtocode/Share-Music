@@ -1,3 +1,8 @@
+/*
+ * Copyright (c) 2021-2026 tooboredtocode
+ * All Rights Reserved
+ */
+
 use std::sync::atomic::{AtomicUsize, Ordering};
 use std::time::Duration;
 
@@ -53,8 +58,7 @@ impl TokenBucket {
 
     /// Gets the number of tokens currently available in the bucket.
     #[inline]
-    #[allow(dead_code)]
-    pub fn load_tokens(&self) -> usize {
+    pub fn tokens_available(&self) -> usize {
         self.load_tokens_internal().0
     }
 

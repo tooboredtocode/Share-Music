@@ -1,25 +1,26 @@
 /*
- * Copyright (c) 2021-2025 tooboredtocode
+ * Copyright (c) 2021-2026 tooboredtocode
  * All Rights Reserved
  */
 
 use prometheus_client::metrics::family::Family;
-use prometheus_client::metrics::gauge::Gauge;
 use prometheus_client::metrics::histogram::Histogram;
 use reqwest::{RequestBuilder, StatusCode};
 use std::borrow::Cow;
 use std::fmt;
-use std::time::{Duration, Instant};
+use std::time::Duration;
 use tracing::{Instrument, debug, field, instrument};
 use url::Url;
 
-use crate::context::metrics::{
-    Metrics as CtxMetrics, RequestWaitingState, ThirdPartyLabels, ThirdPartyWaitingLabels,
+use crate::context::metrics::{Metrics as CtxMetrics, ThirdPartyLabels, ThirdPartyRateLimitLabels};
+use crate::util::metric_utils::{
+    HasHistogramFamilyExt, TimeFutureExt, UnpackErr, has_histogram_families,
 };
 use crate::util::odesli::cache::OdesliCache;
 use crate::util::odesli::endpoints::OdesliEndpoints;
 use crate::util::odesli::provider_id::ProviderId;
 use crate::util::odesli::ratelimiter::OdesliRateLimiter;
+use crate::util::odesli::shared_queue::SharedQueue;
 
 mod api_type;
 mod cache;
@@ -29,7 +30,6 @@ pub mod provider_id;
 mod ratelimiter;
 mod shared_queue;
 
-use crate::util::odesli::shared_queue::SharedQueue;
 pub use api_type::*;
 pub use cache::OdesliClientResponse;
 pub use error::{ApiClientErr, ApiErr};
@@ -44,9 +44,14 @@ pub struct OdesliClient {
 }
 
 struct OdesliMetrics {
-    waiting_requests: Family<ThirdPartyWaitingLabels, Gauge>,
+    third_party_rate_limit: Family<ThirdPartyRateLimitLabels, Histogram>,
     third_party_api: Family<ThirdPartyLabels, Histogram>,
 }
+
+has_histogram_families!(OdesliMetrics, (
+    third_party_rate_limit: ThirdPartyRateLimitLabels,
+    third_party_api: ThirdPartyLabels
+));
 
 impl fmt::Debug for OdesliClient {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
@@ -66,7 +71,7 @@ impl OdesliClient {
             shared_queue: SharedQueue::new(),
             cache: OdesliCache::new(),
             metrics: OdesliMetrics {
-                waiting_requests: metrics.third_party_api_waiting.clone(),
+                third_party_rate_limit: metrics.third_party_rate_limit.clone(),
                 third_party_api: metrics.third_party_api.clone(),
             },
         }
@@ -80,6 +85,10 @@ impl OdesliClient {
     pub fn with_hourly_limit(mut self, hourly_limit: u32) -> Self {
         self.ratelimiter = OdesliRateLimiter::new(hourly_limit);
         self
+    }
+
+    pub fn get_tokens_available(&self) -> usize {
+        self.ratelimiter.tokens_available()
     }
 
     pub fn clear_expired_cache_entries(&self, max_age: Duration) {
@@ -97,28 +106,6 @@ impl OdesliClient {
         req
     }
 
-    fn start_metrics_phase(&self, req_data: &OdesliEndpoints<'_>, state: RequestWaitingState) {
-        self.metrics
-            .waiting_requests
-            .get_or_create(&ThirdPartyWaitingLabels {
-                method: req_data.method().into(),
-                url: Cow::from(req_data.uri()),
-                state,
-            })
-            .inc();
-    }
-
-    fn end_metrics_phase(&self, req_data: &OdesliEndpoints<'_>, state: RequestWaitingState) {
-        self.metrics
-            .waiting_requests
-            .get_or_create(&ThirdPartyWaitingLabels {
-                method: req_data.method().into(),
-                url: Cow::from(req_data.uri()),
-                state,
-            })
-            .dec();
-    }
-
     #[instrument(level = "debug", skip_all)]
     pub async fn fetch(&self, url: &Url) -> Result<OdesliClientResponse, ApiErr> {
         let provider_id = match ProviderId::parse_url(url) {
@@ -129,11 +116,7 @@ impl OdesliClient {
                     e
                 );
 
-                // Wait for the rate limiter to allow us to make the request
-                self.ratelimiter.acquire().await;
-
-                // Make the API request without caching, since we don't have a provider ID to cache with
-                return self.fetch_inner(&OdesliEndpoints::links(url)).await;
+                return self.fetch_inner(url).await;
             }
         };
 
@@ -148,49 +131,44 @@ impl OdesliClient {
                         return Ok(cached);
                     }
                     debug!("Cache miss for provider, fetching from API");
-
-                    let req_data = OdesliEndpoints::links(url);
-
-                    self.start_metrics_phase(&req_data, RequestWaitingState::Ratelimited);
-                    // Wait for the rate limiter to allow us to make the request
-                    self.ratelimiter.acquire().await;
-                    self.end_metrics_phase(&req_data, RequestWaitingState::Ratelimited);
-
-                    self.start_metrics_phase(&req_data, RequestWaitingState::WaitingForResponse);
-                    // Make the API request and cache the response
-                    let res = self.fetch_inner(&req_data).await;
-                    self.end_metrics_phase(&req_data, RequestWaitingState::WaitingForResponse);
-
-                    res
+                    self.fetch_inner(url).await
                 },
                 |result| result.duplicate(),
             )
             .await
     }
 
-    /// fetch without rate limiting or caching, used internally by fetch
-    async fn fetch_inner(
-        &self,
-        req_data: &OdesliEndpoints<'_>,
-    ) -> Result<OdesliClientResponse, ApiErr> {
-        let req = self.request(req_data).build()?;
+    /// fetch without caching, used internally by fetch
+    async fn fetch_inner(&self, url: &Url) -> Result<OdesliClientResponse, ApiErr> {
+        let req_data = OdesliEndpoints::links(url);
 
-        let now = Instant::now();
-        let resp = self
+        // Wait for the rate limiter to allow us to make the request
+        let diff = self.ratelimiter.acquire().time().await.1;
+        self.metrics.observe_duration(
+            ThirdPartyRateLimitLabels {
+                method: req_data.method().into(),
+                url: Cow::from(req_data.uri()),
+            },
+            diff,
+        );
+
+        let req = self.request(&req_data).build()?;
+
+        let (resp, diff) = self
             .client
             .execute(req)
             .instrument(tracing::info_span!("http_request"))
-            .await?;
-        let diff = now.elapsed();
-
-        self.metrics
-            .third_party_api
-            .get_or_create(&ThirdPartyLabels {
+            .time()
+            .await
+            .unpack_err()?;
+        self.metrics.observe_duration(
+            ThirdPartyLabels {
                 method: req_data.method().into(),
                 url: Cow::from(req_data.uri()),
                 status: resp.status().into(),
-            })
-            .observe(diff.as_secs_f64());
+            },
+            diff,
+        );
 
         match resp.status() {
             StatusCode::OK => {}

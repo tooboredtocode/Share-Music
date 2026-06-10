@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2021-2025 tooboredtocode
+ * Copyright (c) 2021-2026 tooboredtocode
  * All Rights Reserved
  */
 
@@ -39,8 +39,10 @@ pub struct Metrics {
     pub shard_latencies: Family<ShardLatencyLabels, Gauge<f64, AtomicU64>>,
     pub cluster_state: Family<ClusterLabels, Gauge>,
 
+    pub third_party_rate_limit: Family<ThirdPartyRateLimitLabels, Histogram>,
     pub third_party_api: Family<ThirdPartyLabels, Histogram>,
-    pub third_party_api_waiting: Family<ThirdPartyWaitingLabels, Gauge>,
+
+    pub odesli_rate_limit_tokens: Gauge<u64, AtomicU64>,
 }
 
 #[derive(Clone, Debug, Hash, PartialEq, Eq, EncodeLabelSet)]
@@ -80,23 +82,16 @@ pub struct ClusterLabels {
 }
 
 #[derive(Clone, Debug, Hash, PartialEq, Eq, EncodeLabelSet)]
+pub struct ThirdPartyRateLimitLabels {
+    pub method: Method,
+    pub url: Cow<'static, str>,
+}
+
+#[derive(Clone, Debug, Hash, PartialEq, Eq, EncodeLabelSet)]
 pub struct ThirdPartyLabels {
     pub method: Method,
     pub url: Cow<'static, str>,
     pub status: u16,
-}
-
-#[derive(Copy, Clone, Debug, Hash, PartialEq, Eq, EncodeLabelValue)]
-pub enum RequestWaitingState {
-    Ratelimited,
-    WaitingForResponse,
-}
-
-#[derive(Clone, Debug, Hash, PartialEq, Eq, EncodeLabelSet)]
-pub struct ThirdPartyWaitingLabels {
-    pub method: Method,
-    pub url: Cow<'static, str>,
-    pub state: RequestWaitingState,
 }
 
 #[derive(Clone, Debug, Hash, PartialEq, Eq, EncodeLabelValue)]
@@ -150,12 +145,19 @@ impl Metrics {
             current_states: Default::default(),
             shard_latencies: Default::default(),
             cluster_state: Default::default(),
+            third_party_rate_limit:
+                Family::<ThirdPartyRateLimitLabels, Histogram>::new_with_constructor(|| {
+                    Histogram::new([
+                        0.1, 0.15, 0.2, 0.3, 0.5, 0.75, 1.0, 1.5, 2.0, 3.0, 5.0, 7.5, 10.0, 15.0,
+                        20.0,
+                    ])
+                }),
             third_party_api: Family::<ThirdPartyLabels, Histogram>::new_with_constructor(|| {
                 Histogram::new([
                     0.1, 0.15, 0.2, 0.3, 0.5, 0.75, 1.0, 1.5, 2.0, 3.0, 5.0, 7.5, 10.0, 15.0, 20.0,
                 ])
             }),
-            third_party_api_waiting: Default::default(),
+            odesli_rate_limit_tokens: Default::default(),
         };
 
         let version = Family::<VersionLabels, Gauge>::default();
@@ -199,9 +201,14 @@ impl Metrics {
             this.third_party_api.clone(),
         );
         this.registry.register(
-            "3rd_party_api_waiting_requests",
-            "Number of requests currently waiting for a response from the various APIs used by the bots",
-            this.third_party_api_waiting.clone(),
+            "3rd_party_api_rate_limit_duration_seconds",
+            "Time spent waiting for rate limits for the various APIs used by the bots",
+            this.third_party_rate_limit.clone(),
+        );
+        this.registry.register(
+            "odesli_rate_limit_tokens",
+            "Number of tokens currently available in the Odesli rate limiter",
+            this.odesli_rate_limit_tokens.clone(),
         );
 
         this.cluster_state
@@ -274,6 +281,12 @@ fn shard_status_to_string(status: ShardState) -> String {
 
 pub async fn metrics_handler(AxumState(context): AxumState<Arc<Context>>) -> (StatusCode, String) {
     use prometheus_client::encoding::text::encode;
+
+    // Update some of the metrics that just need to be updated before being scraped
+    context
+        .metrics
+        .odesli_rate_limit_tokens
+        .set(context.odesli_client.get_tokens_available() as u64);
 
     let mut buffer = String::new();
     match encode(&mut buffer, &context.metrics.registry) {

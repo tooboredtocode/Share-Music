@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2021-2025 tooboredtocode
+ * Copyright (c) 2021-2026 tooboredtocode
  * All Rights Reserved
  */
 
@@ -12,6 +12,7 @@ pub mod colour;
 pub mod discord_locales;
 pub mod error;
 pub mod interaction;
+pub mod metric_utils;
 pub mod odesli;
 pub mod setup_logger;
 pub mod shard_poller;
