@@ -122,15 +122,20 @@ impl OdesliClient {
 
         tracing::Span::current().record("provider_id", field::debug(&provider_id));
 
+        if let Some(cached) = self.cache.get_response(&provider_id) {
+            debug!("Cache hit for provider");
+            return Ok(cached);
+        }
+        debug!("Cache miss for provider, fetching from API");
+
         self.shared_queue
             .run_shared(
                 provider_id.clone(),
                 || async {
+                    // Check the cache again in case another request has already fetched the data
                     if let Some(cached) = self.cache.get_response(&provider_id) {
-                        debug!("Cache hit for provider");
                         return Ok(cached);
                     }
-                    debug!("Cache miss for provider, fetching from API");
                     self.fetch_inner(url).await
                 },
                 |result| result.duplicate(),
