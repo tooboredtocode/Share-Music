@@ -4,6 +4,7 @@
  */
 
 #![allow(clippy::uninlined_format_args)]
+extern crate core;
 
 use crate::args::Args;
 use crate::color_config::ColorConfig;

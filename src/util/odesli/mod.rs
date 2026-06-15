@@ -43,6 +43,13 @@ pub struct OdesliClient {
     metrics: OdesliMetrics,
 }
 
+pub struct OdesliClientBuilder<'a> {
+    client: reqwest::Client,
+    metrics: &'a mut CtxMetrics,
+    api_key: Option<Box<str>>,
+    hourly_limit: Option<u32>,
+}
+
 struct OdesliMetrics {
     third_party_rate_limit: Family<ThirdPartyRateLimitLabels, Histogram>,
     third_party_api: Family<ThirdPartyLabels, Histogram>,
@@ -62,33 +69,49 @@ impl fmt::Debug for OdesliClient {
     }
 }
 
-impl OdesliClient {
-    pub fn new(client: reqwest::Client, metrics: &CtxMetrics) -> Self {
+impl<'a> OdesliClientBuilder<'a> {
+    fn new(client: reqwest::Client, metrics: &'a mut CtxMetrics) -> Self {
         Self {
             client,
+            metrics,
             api_key: None,
-            ratelimiter: OdesliRateLimiter::new(60),
-            shared_queue: SharedQueue::new(),
-            cache: OdesliCache::new(),
-            metrics: OdesliMetrics {
-                third_party_rate_limit: metrics.third_party_rate_limit.clone(),
-                third_party_api: metrics.third_party_api.clone(),
-            },
+            hourly_limit: None,
         }
     }
 
-    pub fn with_api_key(mut self, api_key: impl AsRef<str>) -> Self {
-        self.api_key = Some(Box::from(api_key.as_ref()));
+    pub fn with_api_key(mut self, api_key: Option<impl AsRef<str>>) -> Self {
+        self.api_key = api_key.map(|k| Box::from(k.as_ref()));
         self
     }
 
-    pub fn with_hourly_limit(mut self, hourly_limit: u32) -> Self {
-        self.ratelimiter = OdesliRateLimiter::new(hourly_limit);
+    pub fn with_hourly_limit(mut self, hourly_limit: Option<u32>) -> Self {
+        self.hourly_limit = hourly_limit;
         self
     }
 
-    pub fn get_tokens_available(&self) -> usize {
-        self.ratelimiter.tokens_available()
+    pub fn build(self) -> OdesliClient {
+        let ratelimiter = OdesliRateLimiter::new(self.hourly_limit.unwrap_or(60) as usize);
+        ratelimiter.register_metric(&mut self.metrics.registry);
+
+        let metrics = OdesliMetrics {
+            third_party_rate_limit: self.metrics.third_party_rate_limit.clone(),
+            third_party_api: self.metrics.third_party_api.clone(),
+        };
+
+        OdesliClient {
+            client: self.client,
+            api_key: self.api_key,
+            ratelimiter,
+            shared_queue: SharedQueue::new(),
+            cache: OdesliCache::new(),
+            metrics,
+        }
+    }
+}
+
+impl OdesliClient {
+    pub fn builder(client: reqwest::Client, metrics: &mut CtxMetrics) -> OdesliClientBuilder<'_> {
+        OdesliClientBuilder::new(client, metrics)
     }
 
     pub fn clear_expired_cache_entries(&self, max_age: Duration) {

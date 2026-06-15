@@ -89,7 +89,7 @@ impl Context {
         let cluster_id = 0;
         let cluster_count = 1;
 
-        let metrics = Metrics::new(cluster_id);
+        let mut metrics = Metrics::new(cluster_id);
 
         let cluster_state_metric = metrics.cluster_state.clone();
         let state = ThisState::new_with_on_change(ClusterState::Starting, move |old, new| {
@@ -132,13 +132,10 @@ impl Context {
             None
         };
 
-        let mut odesli_client = OdesliClient::new(http_client.clone(), &metrics);
-        if let Some(api_key) = &args.odesli_api_key {
-            odesli_client = odesli_client.with_api_key(api_key)
-        }
-        if let Some(hourly_limit) = args.odesli_hourly_limit {
-            odesli_client = odesli_client.with_hourly_limit(hourly_limit);
-        }
+        let odesli_client = OdesliClient::builder(http_client.clone(), &mut metrics)
+            .with_api_key(args.odesli_api_key.as_ref())
+            .with_hourly_limit(args.odesli_hourly_limit)
+            .build();
 
         let ctx: Arc<_> = Context {
             image_client: ImageClient::new(http_client, color_config, &metrics),
