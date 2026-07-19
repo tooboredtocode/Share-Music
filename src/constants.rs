@@ -6,6 +6,9 @@
 pub const NAME: &str = "ShareMusic";
 pub const NAME_SHORT: &str = "Sharing";
 
+pub const CLUSTER_ID: u16 = 0;
+pub const CLUSTER_COUNT: u16 = 1;
+
 pub const USER_AGENT: &str = concat!("share-music-bot/", env!("CARGO_PKG_VERSION"));
 
 pub const VERSION: &str = env!("CARGO_PKG_VERSION");

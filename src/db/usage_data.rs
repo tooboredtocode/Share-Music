@@ -3,17 +3,16 @@
  * All Rights Reserved
  */
 
-use sea_orm::{EntityTrait, Set};
-use tracing::{debug, trace, warn};
+use sea_orm::Set;
 use twilight_model::application::interaction::Interaction;
 use twilight_model::id::Id;
 use twilight_model::id::marker::{ChannelMarker, GuildMarker, InteractionMarker, UserMarker};
 
-use crate::context::Ctx;
+use crate::clients::odesli::EntityData;
+use crate::db::DbSavable;
 use crate::db::entity::command_usage;
 use crate::db::entity::sea_orm_active_enums::CommandSource as DbCommandSource;
 use crate::db::util::snowflake_to_db;
-use crate::util::odesli::EntityData;
 
 #[derive(Debug, PartialEq, Eq)]
 pub enum CommandSource {
@@ -105,6 +104,11 @@ impl UsageData {
             title: entity_data.title.clone(),
         }
     }
+}
+
+impl DbSavable for UsageData {
+    const TYPE_INFO: &'static str = "command usage data";
+    type Entity = command_usage::Entity;
 
     fn into_active_model(self) -> command_usage::ActiveModel {
         command_usage::ActiveModel {
@@ -119,49 +123,6 @@ impl UsageData {
             kind: Set(self.kind),
             artist: Set(self.artist),
             title: Set(self.title),
-        }
-    }
-
-    pub async fn save_to_db(self, ctx: Ctx) {
-        let Some(conn) = &ctx.db_connection else {
-            trace!("Db Url not provided, skipping saving command usage data");
-            return;
-        };
-
-        let active_model = self.into_active_model();
-
-        match command_usage::Entity::insert(active_model).exec(conn).await {
-            Ok(_) => {
-                debug!("Successfully saved command usage data to the database");
-            }
-            Err(e) => {
-                warn!("Failed to save command usage data to the database: {}", e);
-            }
-        }
-    }
-
-    pub async fn save_multi_to_db(usages: Vec<UsageData>, ctx: Ctx) {
-        let Some(conn) = &ctx.db_connection else {
-            trace!("Db Url not provided, skipping saving command usage data");
-            return;
-        };
-
-        let active_models: Vec<command_usage::ActiveModel> =
-            usages.into_iter().map(|u| u.into_active_model()).collect();
-
-        match command_usage::Entity::insert_many(active_models)
-            .exec(conn)
-            .await
-        {
-            Ok(_) => {
-                debug!("Successfully saved multiple command usage data to the database");
-            }
-            Err(e) => {
-                warn!(
-                    "Failed to save multiple command usage data to the database: {:?}",
-                    e
-                );
-            }
         }
     }
 }

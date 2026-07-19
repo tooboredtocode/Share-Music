@@ -2,8 +2,9 @@
  * Copyright (c) 2021-2026 tooboredtocode
  * All Rights Reserved
  */
-use clap::{Parser, ValueEnum};
 use std::path::PathBuf;
+
+use clap::{Parser, ValueEnum};
 
 #[derive(Debug, Parser)]
 pub struct Args {

@@ -3,11 +3,12 @@
  * All Rights Reserved
  */
 
-use crate::args::LogFormat;
 use tracing::Level;
 use tracing_subscriber::EnvFilter;
 
-pub fn setup(env_filter: &str, log_format: LogFormat) {
+use crate::args::LogFormat;
+
+pub fn setup_logger(env_filter: &str, log_format: LogFormat) {
     let filter = EnvFilter::builder()
         .with_default_directive(Level::INFO.into())
         .parse_lossy(env_filter);

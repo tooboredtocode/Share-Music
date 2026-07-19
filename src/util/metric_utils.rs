@@ -3,12 +3,13 @@
  * All Rights Reserved
  */
 
-use prometheus_client::metrics::family::Family;
-use prometheus_client::metrics::histogram::Histogram;
 use std::hash::Hash;
 use std::pin::Pin;
 use std::task::{Context, Poll};
 use std::time::{Duration, Instant};
+
+use prometheus_client::metrics::family::Family;
+use prometheus_client::metrics::histogram::Histogram;
 
 pub trait TimeFutureExt: Future {
     /// Wraps the future in a `TimeFuture` that measures the time taken to complete the future.
@@ -81,25 +82,6 @@ impl_unpack_err_for_tuple!(T1, T2, T3, T4, T5, T6, T7, T8, T9, T10);
 pub trait HasHistogramFamily<L: Clone + Hash + Eq> {
     fn family_with_label(&self) -> &Family<L, Histogram>;
 }
-
-macro_rules! has_histogram_families {
-    ($struct_name:ident, ($($field_name:ident: $label_type:ty),*)) => {
-        $(
-            impl $crate::util::metric_utils::HasHistogramFamily<$label_type> for $struct_name {
-                fn family_with_label(
-                    &self,
-                ) -> &::prometheus_client::metrics::family::Family<
-                    $label_type,
-                    ::prometheus_client::metrics::histogram::Histogram,
-                > {
-                    &self.$field_name
-                }
-            }
-        )*
-    };
-}
-
-pub(crate) use has_histogram_families;
 
 pub trait HasHistogramFamilyExt<L: Clone + Hash + Eq>: HasHistogramFamily<L> {
     /// Observes the given duration in the histogram family with the given label.

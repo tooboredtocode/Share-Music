@@ -9,12 +9,14 @@ build = "build.rs"
 members = [".", "migration"]
 
 [dependencies]
-migration = { path = "migration" }
+migration = { path = "./migration" }
+metronomos = "0.2.2"
+metronomos-pulse = { version = "0.1.2", features = ["ext-reqwest"] }
 
 axum = "0.8"
 clap = { version = "4.6", features = ["derive", "env"] }
 dashmap = "6.2"
-futures-util = { default-features = false, version = "0.3" }
+futures-util = "0.3"
 reqwest = { version = "0.13", features = ["json", "query"] }
 image = "0.25"
 itertools = "0.15"
@@ -26,12 +28,12 @@ sea-orm = { version = "1.1", features = ["runtime-tokio", "sqlx-postgres"] }
 serde = { version = "1.0", features = ["derive"] }
 serde_json = "1.0"
 tokio = { version = "1.52", features = ["full"] }
-this-state = "0.3"
 tracing = "0.1"
 tracing-subscriber = { version = "0.3", features = ["json", "parking_lot", "registry", "env-filter"] }
 twilight-gateway = "0.17"
 twilight-http = "0.17"
 twilight-model = "0.17"
 twilight-util = { version = "0.17", features = ["builder", "permission-calculator"] }
+twilight-interactions = "0.17"
 url = "2.5"
-serde_yaml = "0.9.34"  # 0.9.34+deprecated
+serde_yaml = "0.9.34"

@@ -1,29 +1,24 @@
-/*
- * Copyright (c) 2021-2026 tooboredtocode
- * All Rights Reserved
- */
+use std::time::Duration;
 
-#![allow(clippy::uninlined_format_args)]
-extern crate core;
+use metronomos::Runtime;
+use tracing::{error, info};
 
 use crate::args::Args;
 use crate::color_config::ColorConfig;
-use crate::context::Context;
-use crate::context::{ClusterState, Ctx};
-use crate::util::shard_poller::ShardPoller;
-use crate::util::{EmptyResult, setup_logger};
-use std::time::Duration;
-use tokio::task::JoinSet;
-use tracing::{error, info, info_span};
-use twilight_gateway::Shard;
+use crate::http_server::provide_http_server;
+use crate::util::EmptyResult;
+use crate::util::setup_logger::setup_logger;
 
 mod args;
+mod clients;
 mod color_config;
-mod commands;
 mod constants;
-mod context;
 mod db;
-mod handlers;
+mod event_handler;
+mod http_server;
+mod interactions;
+mod metrics;
+mod shard_runners;
 mod util;
 
 fn main() {
@@ -33,6 +28,8 @@ fn main() {
         .as_ref()
         .map(|path| ColorConfig::from_file(path))
         .unwrap_or_default();
+
+    setup_logger(&args.log, args.log_format);
 
     let runtime = tokio::runtime::Builder::new_multi_thread()
         .enable_all()
@@ -48,54 +45,31 @@ fn main() {
 }
 
 async fn async_main(args: Args, color_config: ColorConfig) -> EmptyResult<()> {
-    setup_logger::setup(&args.log, args.log_format);
     info!("{} v{} initializing!", constants::NAME, constants::VERSION);
+    let mut runtime = Runtime::new_with(|b| {
+        b.provide_arc_value(args)?;
+        b.provide_arc_value(color_config)?;
 
-    let (context, shards) = Context::new(&args, color_config).await?;
-    context.start_status_server(args.metrics_port).await?;
-    commands::sync_commands(&context).await?;
+        b.provide_async(db::Database::init)?;
 
-    info!("Cluster connecting to discord...");
-    context.state.set(ClusterState::Running);
+        b.provide_with(clients::provide_clients)?;
+        b.provide_with(metrics::provide_metrics)?;
 
-    let mut shard_tasks = JoinSet::new();
-    for shard in shards {
-        let context = context.clone();
-        shard_tasks.spawn(shard_main(shard, context));
-    }
+        b.provide_async(interactions::InteractionsHandler::init)?;
+        b.provide(event_handler::EventHandler::init)?;
 
-    while let Some(res) = shard_tasks.join_next().await {
-        if let Err(err) = res {
-            error!("Shard task panicked: {}", err);
-            context.state.set(ClusterState::Crashing);
-        }
-    }
+        b.provide(provide_http_server)?;
+        b.provide(shard_runners::provide_shard_runners)?;
 
-    info!("All shard tasks have been joined, exiting main loop");
-    Ok(())
-}
+        Ok(())
+    })
+    .await
+    .map_err(|e| {
+        error!("Failed to build runtime: {}", e);
+    })?;
 
-async fn shard_main(mut shard: Shard, context: Ctx) -> EmptyResult<()> {
-    let mut shard_poller = ShardPoller::new_from_context(&context);
-    let span = info_span!("shard", id = %shard.id());
+    info!("Runtime built successfully, starting main loop...");
+    runtime.run().await;
 
-    span.in_scope(|| info!("Shard is connecting..."));
-    while let Some(event) = shard_poller.poll(&mut shard).await.map_err(|_| {
-        span.in_scope(|| error!("Shard has been fatally closed"));
-        context.state.set(ClusterState::Crashing);
-    })? {
-        match event {
-            Ok(event) => {
-                // everything is wrapped in the handlers module
-                handlers::handle(&shard, event, &context);
-            }
-            Err(err) => {
-                span.in_scope(|| info!("A non fatal error occurred during shard polling: {}", err));
-            }
-        }
-    }
-
-    // If we get here, the termination future was triggered and we exited as expected
-    span.in_scope(|| info!("Shard has shut down gracefully"));
     Ok(())
 }

@@ -3,14 +3,13 @@
  * All Rights Reserved
  */
 
-use sea_orm::{EntityTrait, Set, sea_query};
-use tracing::{debug, trace, warn};
+use sea_orm::{EntityTrait, Insert, Set, sea_query};
 use twilight_model::gateway::event::Event;
 use twilight_model::gateway::payload::incoming::{GuildCreate, GuildUpdate};
 use twilight_model::id::Id;
 use twilight_model::id::marker::GuildMarker;
 
-use crate::context::Ctx;
+use crate::db::DbSavable;
 use crate::db::entity::discord_guild;
 use crate::db::util::snowflake_to_db;
 
@@ -45,6 +44,11 @@ impl GuildMetadata {
             name: guild.name.clone(),
         }
     }
+}
+
+impl DbSavable for GuildMetadata {
+    const TYPE_INFO: &'static str = "guild metadata";
+    type Entity = discord_guild::Entity;
 
     fn into_active_model(self) -> discord_guild::ActiveModel {
         discord_guild::ActiveModel {
@@ -53,29 +57,21 @@ impl GuildMetadata {
         }
     }
 
-    pub async fn save_to_db(self, ctx: Ctx) {
-        let Some(conn) = &ctx.db_connection else {
-            trace!("Db Url not provided, skipping saving guild metadata");
-            return;
-        };
+    fn insert(model: discord_guild::ActiveModel) -> sea_orm::Insert<discord_guild::ActiveModel> {
+        discord_guild::Entity::insert(model).on_conflict(
+            sea_query::OnConflict::column(discord_guild::Column::Id)
+                .update_column(discord_guild::Column::Name)
+                .to_owned(),
+        )
+    }
 
-        let active_model = self.into_active_model();
-
-        match discord_guild::Entity::insert(active_model)
-            .on_conflict(
-                sea_query::OnConflict::column(discord_guild::Column::Id)
-                    .update_column(discord_guild::Column::Name)
-                    .to_owned(),
-            )
-            .exec(conn)
-            .await
-        {
-            Ok(_) => {
-                debug!("Successfully saved guild metadata to the database");
-            }
-            Err(e) => {
-                warn!("Failed to save guild metadata to the database: {}", e);
-            }
-        }
+    fn insert_many(
+        models: Vec<<Self::Entity as EntityTrait>::ActiveModel>,
+    ) -> Insert<<Self::Entity as EntityTrait>::ActiveModel> {
+        discord_guild::Entity::insert_many(models).on_conflict(
+            sea_query::OnConflict::column(discord_guild::Column::Id)
+                .update_column(discord_guild::Column::Name)
+                .to_owned(),
+        )
     }
 }
