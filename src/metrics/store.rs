@@ -9,7 +9,7 @@ use prometheus_client::metrics::counter::Counter;
 use prometheus_client::metrics::family::Family;
 use prometheus_client::metrics::gauge::Gauge;
 use prometheus_client::metrics::histogram::Histogram;
-use prometheus_client::registry::Registry;
+use prometheus_client::registry::{Registry, Unit};
 
 use crate::constants::{GIT_BRANCH, GIT_REVISION, NAME, RUST_VERSION, VERSION};
 use crate::metrics::guild_metrics::GuildMetrics;
@@ -37,8 +37,11 @@ macro_rules! default_or {
 }
 
 macro_rules! register_metrics {
-    ($registry:expr, $metrics:expr, $name:literal, $help:literal $(, $unit:expr )?) => {
+    ($registry:expr, $metrics:expr, $name:literal, $help:literal) => {
         $registry.register($name, $help, $metrics.clone());
+    };
+    ($registry:expr, $metrics:expr, $name:literal, $help:literal, $unit:expr) => {
+        $registry.register_with_unit($name, $help, $unit, $metrics.clone());
     };
 }
 
@@ -123,7 +126,7 @@ make_metrics_store!(
         #[help = "Number of events received from the gateway"]
         gateway_events: Family<EventLabels, Counter>,
 
-        #[name = "connected_guilds"]
+        #[name = "guilds"]
         #[help = "Number of guilds the bot is connected to"]
         connected_guilds: GuildMetrics = GuildMetrics::new(),
 
