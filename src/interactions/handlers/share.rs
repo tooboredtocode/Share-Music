@@ -145,5 +145,6 @@ async fn validate_url(
         return Err(());
     }
 
+    debug!(url = %url, "Successfully validated URL, proceeding to fetch data from Odesli API");
     Ok(url)
 }
