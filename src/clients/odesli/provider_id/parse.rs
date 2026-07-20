@@ -255,7 +255,7 @@ impl ProviderId {
             "play.napster.com" => NapsterId::from_url(url).map(Self::Napster),
             "www.pandora.com" => PandoraId::from_url(url).map(Self::Pandora),
             "open.spotify.com" => SpotifyId::from_url(url).map(Self::Spotify),
-            "listen.tidal.com" => TidalId::from_url(url).map(Self::Tidal),
+            "tidal.com" | "listen.tidal.com" => TidalId::from_url(url).map(Self::Tidal),
             "music.yandex.ru" => YandexId::from_url(url).map(Self::Yandex),
             "www.youtube.com" | "music.youtube.com" => YouTubeId::from_url(url).map(Self::YouTube),
             other_domain => {
