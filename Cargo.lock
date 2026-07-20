@@ -3729,7 +3729,7 @@ dependencies = [
 
 [[package]]
 name = "share-music"
-version = "3.9.1"
+version = "3.9.2"
 dependencies = [
  "axum",
  "clap",
