@@ -138,17 +138,16 @@ make_metrics_store!(
         #[unit = Unit::Seconds]
         shard_latencies: Family<ShardLatencyLabels, Gauge<f64, AtomicU64>>,
 
-        #[name = "3rd_party_api_request_duration_seconds"]
-        #[help = "Response time for the various APIs used by the bots"]
+        #[name = "3rd_party_api_rate_limit_duration_seconds"]
+        #[help = "Time spent waiting for rate limits for the various APIs used by the bots"]
         third_party_rate_limit: Family<ThirdPartyRateLimitLabels, Histogram>
         = Family::<ThirdPartyRateLimitLabels, Histogram>::new_with_constructor(|| {
             Histogram::new([
-                0.1, 0.15, 0.2, 0.3, 0.5, 0.75, 1.0, 1.5, 2.0, 3.0, 5.0, 7.5, 10.0, 15.0,
-                20.0,
+                0.1, 0.15, 0.2, 0.3, 0.5, 0.75, 1.0, 1.5, 2.0, 3.0, 5.0, 7.5, 10.0, 15.0, 20.0,
             ])
         }),
-        #[name = "3rd_party_api_rate_limit_duration_seconds"]
-        #[help = "Time spent waiting for rate limits for the various APIs used by the bots"]
+        #[name = "3rd_party_api_request_duration_seconds"]
+        #[help = "Response time for the various APIs used by the bots"]
         third_party_api: Family<ThirdPartyLabels, Histogram>
         = Family::<ThirdPartyLabels, Histogram>::new_with_constructor(|| {
             Histogram::new([
