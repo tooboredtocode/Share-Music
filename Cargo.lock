@@ -2195,9 +2195,9 @@ dependencies = [
 
 [[package]]
 name = "metronomos-pulse"
-version = "0.1.2"
+version = "0.1.3"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "d905c6b157d3b34b5b2c8184f6f66f067fc9539b8cf842f13ba7d041c7ae25ec"
+checksum = "b1276b2172eb789a0dabca06ef763f7c988642435e69c0d2e50eb35d81980f36"
 dependencies = [
  "any-container",
  "futures",
