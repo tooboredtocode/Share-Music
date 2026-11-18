@@ -22,7 +22,7 @@ image = "0.25"
 itertools = "0.15"
 lazy-regex = "3.6"
 parking_lot = "0.12"
-prometheus-client = "0.25"
+prometheus-client = "0.26"
 regex = "1.12"
 sea-orm = { version = "1.1", features = ["runtime-tokio", "sqlx-postgres"] }
 serde = { version = "1.0", features = ["derive"] }
